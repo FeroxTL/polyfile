@@ -1,0 +1,43 @@
+{% extends "layouts/base.html" %}
+{% load render_bundle from webpack_loader %}
+
+{% block title %}Sign in - {{ block.super }}{% endblock %}
+{% block bodyclass %}text-center{% endblock %}
+
+{% block head %}
+    {% render_bundle 'vendor' 'css' %}
+    {% render_bundle 'blockForm' 'css' %}
+{% endblock %}
+
+{% block body %}
+    <main class="form-signin">
+      <form action="" method="POST">
+        {% csrf_token %}
+
+        <img class="mb-4" src="https://getbootstrap.com/docs/5.1/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57">
+
+        {% if next and user.is_authenticated %}
+          <p class="alert alert-warning">Your account doesn't have access to this page. To proceed,
+          please sign in with an account that has access.</p>
+        {% endif %}
+
+        {% for error in form.non_field_errors %}
+          <p class="alert alert-warning">{{ error }}</p>
+        {% empty %}
+          <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+        {% endfor %}
+
+        {% for field in form %}
+          <div class="form-floating">
+            {{ field }}
+            {{ field.label_tag }}
+          </div>
+        {% endfor %}
+
+        <button class="w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
+      </form>
+
+      <p class="mt-5 mb-3"><a href="{% url 'password_reset' %}">Forgot password?</a></p>
+
+    </main>
+{% endblock %}

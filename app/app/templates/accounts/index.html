@@ -1,0 +1,14 @@
+{% extends "layouts/base.html" %}
+{% load render_bundle from webpack_loader %}
+
+{% block title %}Dashboard - {{ block.super }}{% endblock %}
+
+{% block head %}
+    {% render_bundle 'vendor' 'css' %}
+    {% render_bundle 'dashboard' 'css' %}
+{% endblock %}
+
+{% block body %}
+    {% render_bundle 'vendor' 'js' %}
+    {% render_bundle 'dashboard' 'js' %}
+{% endblock %}

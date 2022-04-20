@@ -1,0 +1,52 @@
+//
+// Styles
+//
+
+// Import Custom Variables
+@import "variables";
+
+// Import Bootstrap
+@import "~bootstrap/scss/bootstrap.scss";
+
+// Import Custom SCSS
+@import "global.scss";
+
+// Layout
+@import "layout/authentication.scss";
+@import "layout/dashboard-default";
+@import "layout/dashboard-fixed.scss";
+@import "layout/error.scss";
+
+// Navigation
+@import "navigation/nav.scss";
+@import "navigation/topnav.scss";
+@import "navigation/sidenav/sidenav.scss";
+@import "navigation/sidenav/sidenav-dark.scss";
+//@import "navigation/sidenav/sidenav-light.scss";
+
+// FontAwesome
+$fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
+@import "~@fortawesome/fontawesome-free/scss/fontawesome.scss";
+@import "~@fortawesome/fontawesome-free/scss/solid.scss";
+
+
+//.btn-breadcrumb
+.breadcrumb-item + .breadcrumb-item::before {
+  // Fixes divider position
+  padding: 0.375rem 0.3rem 0.375rem 0;
+}
+.breadcrumb-item > .btn-breadcrumb {
+  padding: 0.375rem 0.2rem;
+}
+
+.dropdown-menu-center {
+  right: auto;
+  left: 50%;
+  -webkit-transform: translate(-50%, 0);
+  -o-transform: translate(-50%, 0);
+  transform: translate(-50%, 0);
+}
+
+.mb-20 {
+  margin-bottom: 12rem !important;
+}

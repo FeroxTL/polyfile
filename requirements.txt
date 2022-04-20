@@ -1,0 +1,4 @@
+Django==3.2.12
+djangorestframework==3.13.1
+django-webpack-loader==1.4.1
+django-treebeard==4.5.1
