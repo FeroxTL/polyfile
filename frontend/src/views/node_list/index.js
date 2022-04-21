@@ -5,7 +5,7 @@ import {Loader} from "../../components/bootstrap/loader";
 import {modal} from "../../components/bootstrap/modal";
 import TopNavBarNodeMenu from "./top_navbar_node_menu";
 import NodeBreadcrumbs from "./node_breadcrumbs";
-import NodeListView from "./node_list";
+import NodeListView from "./node_list_view";
 
 
 let NodeListWrapperView = {

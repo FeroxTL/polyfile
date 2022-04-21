@@ -1,5 +1,5 @@
 import m from "mithril";
-import {NavDropDown, NavDropDownDivider, NavDropDownItem} from "../components/bootstrap/dropdown";
+import {NavDropDown, NavDropDownItem} from "../components/bootstrap/dropdown";
 import {Auth} from "../models/auth";
 import routes from "../utils/routes";
 import {modal} from "../components/bootstrap/modal";
@@ -53,7 +53,7 @@ let SideNavAccordion = {
             m("div.sb-sidenav-menu-heading", "Files"),
             m(m.route.Link, {href: routes.library_index, class: "nav-link"}, [
               m("div.sb-nav-link-icon", m("i.fa-solid fa-box")),
-              "Libraries",
+              "My libraries",
             ]),
           ])
         ]),

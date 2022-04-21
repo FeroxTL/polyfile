@@ -2,8 +2,8 @@ import m from "mithril";
 import {globalNodesData, Node} from "./models/nodes";
 import {NodeListWrapperView} from "./views/node_list/index";
 import routes from "./utils/routes";
-import LibraryListView from "./views/library_list";
 import {parsePath} from "./utils/path";
+import LibraryListWrapperView from "./views/library_list/index";
 
 
 let NodeListRouter = {
@@ -16,7 +16,7 @@ let NodeListRouter = {
 
 
 m.route(document.body, routes.library_index, {
-  [routes.library_index]: LibraryListView,
+  [routes.library_index]: LibraryListWrapperView,
   [routes.library_nodes_path]: NodeListRouter,
 });
 

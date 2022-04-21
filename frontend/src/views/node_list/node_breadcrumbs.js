@@ -25,7 +25,7 @@ let NodeBreadcrumbs = {
       m("li.breadcrumb-item", m(m.route.Link, {
         href: routes.library_index,
         class: "btn btn-link btn-breadcrumb",
-      }, "Libraries")),
+      }, "My libraries")),
 
       // Current library
       m("li.breadcrumb-item", m(m.route.Link, {
