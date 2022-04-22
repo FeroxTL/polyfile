@@ -147,3 +147,4 @@ node_modules
 webpack-stats.json
 collected_static
 app/web_dev_assets
+app/local

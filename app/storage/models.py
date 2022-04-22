@@ -1,4 +1,3 @@
-import datetime
 import typing
 import uuid
 
@@ -48,6 +47,9 @@ class DataSourceOption(models.Model):
     )
 
     objects = models.Manager()
+
+    def __str__(self):
+        return f'{self.key}: {self.value}'
 
 
 class DataLibrary(models.Model):
@@ -149,7 +151,7 @@ class Node(MP_Node):
 
     node_order_by = ['name', 'file_type']
     get_file_type_display: typing.Callable
-    DoesNotExist: ObjectDoesNotExist
+    DoesNotExist: typing.Type[ObjectDoesNotExist]
 
     def __str__(self):
         return '{}: {}'.format(self.get_file_type_display(), self.name or '<root>')
@@ -157,7 +159,3 @@ class Node(MP_Node):
     @property
     def is_directory(self):
         return self.file_type == self.FileTypeChoices.DIRECTORY
-
-    @property
-    def is_file(self):
-        return self.file_type == self.FileTypeChoices.FILE

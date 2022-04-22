@@ -207,9 +207,6 @@ class DataLibraryMkdirView(generics.CreateAPIView):
     serializer_class = v1_serializers.RepoDirectorySerializer
     lookup_url_kwarg = 'lib_id'
 
-    def get_queryset(self):
-        return DataLibrary.objects.filter(owner=self.request.user)
-
     def get_library(self, lib_id: UUID) -> DataLibrary:
         return DataLibrary.objects.get(owner=self.request.user, id=lib_id)
 

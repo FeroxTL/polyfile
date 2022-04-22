@@ -23,11 +23,13 @@ python3 -m venv ./env
 source ./env/bin/activate
 pip install -r requirements.txt
 
+cd app
+
 # Create super user
-python app/manage.py createsuperuser
+python ./manage.py createsuperuser
 
 # Running dev server
-python app/manage.py runserver
+python ./manage.py runserver
 ```
 
 * Frontend:
@@ -38,4 +40,17 @@ npm install
 
 # running dev build
 npm run watch
+```
+
+
+# Testing
+```
+# Set up environment
+pip install -r dev-requirements.txt
+
+# Running tests
+make test
+
+# Coverage
+make coverage
 ```

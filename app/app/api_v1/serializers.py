@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from rest_framework import serializers, exceptions
 
+from app.utils.models import get_field
 from storage.data_providers.exceptions import ProviderException
 from storage.data_providers.utils import get_data_provider
 from storage.models import DataLibrary, Node, Mimetype
@@ -198,7 +199,13 @@ class NodeRenameSerializer(serializers.ModelSerializer):
 
 
 class RepoDirectorySerializer(serializers.ModelSerializer):
-    name = serializers.CharField(allow_null=False, allow_blank=False)
+    name = serializers.CharField(
+        allow_null=False,
+        allow_blank=False,
+        max_length=get_field(Node, 'name').max_length,
+        label=get_field(Node, 'name').verbose_name,
+        # todo: should add regexp to check name?
+    )
 
     class Meta:
         model = Node
@@ -217,6 +224,12 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
             'size',
         ]
 
+    @staticmethod
+    def validate_name(name: str):
+        if name in ['.', '..']:
+            raise exceptions.ValidationError('This name is invalid')
+        return name
+
     @transaction.atomic
     def create(self, validated_data):
         library, path, name = itemgetter('library', 'path', 'name')(validated_data)
@@ -225,7 +238,7 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         try:
             parent_node = get_node_by_path(root_node=library.root_dir, path=path)
         except Node.DoesNotExist as e:
-            raise exceptions.ValidationError({'path': str(e)})
+            raise exceptions.ParseError(str(e))
 
         node = parent_node.add_child(
             name=name,
@@ -235,6 +248,6 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         try:
             data_provider.mkdir(library=library, path=path, name=name)
         except ProviderException as e:
-            raise exceptions.ValidationError(e)
+            raise exceptions.ParseError(e)
 
         return node

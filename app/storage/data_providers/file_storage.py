@@ -56,15 +56,15 @@ class FileSystemStorageProvider(BaseProvider):
             path = path[1:]
 
         user_dir = self.get_user_data_dir(library=library)
-        file_path = user_dir / Path(path) / Path(uploaded_file.name)
+        real_path = (user_dir / Path(path) / Path(uploaded_file.name)).resolve()
 
-        if not file_path.is_relative_to(user_dir):
+        if not real_path.is_relative_to(user_dir):
             raise ProviderException('Suspicious operation')
 
-        if file_path.exists():
+        if real_path.exists():
             raise ProviderException('file already exists')
 
-        file_path.write_bytes(uploaded_file.file.read())
+        real_path.write_bytes(uploaded_file.file.read())
         return path
 
     def download_file(self, library: DataLibrary, path: str) -> Path:
@@ -72,19 +72,19 @@ class FileSystemStorageProvider(BaseProvider):
             path = path[1:]
 
         user_dir = self.get_user_data_dir(library=library)
-        file_path = user_dir / Path(path)
+        real_path = (user_dir / Path(path)).resolve()
 
-        if not file_path.is_relative_to(user_dir):
+        if not real_path.is_relative_to(user_dir):
             raise ProviderException('Suspicious operation')
 
-        return file_path
+        return real_path
 
     def mkdir(self, library: DataLibrary, path: str, name: str):
         if path and path[0] == '/':
             path = path[1:]
 
         user_dir = self.get_user_data_dir(library=library)
-        real_path = user_dir / Path(path) / Path(name)
+        real_path = (user_dir / Path(path) / Path(name)).resolve()
 
         if not real_path.is_relative_to(user_dir):
             raise ProviderException('Suspicious operation')
@@ -100,22 +100,26 @@ class FileSystemStorageProvider(BaseProvider):
             path = path[1:]
 
         user_dir = self.get_user_data_dir(library=library)
-        real_path = user_dir / Path(path)
+        real_path = (user_dir / Path(path)).resolve()
 
         if not real_path.is_relative_to(user_dir) or user_dir == real_path:
             raise ProviderException('Suspicious operation')
 
-        if real_path.is_file():
-            os.remove(real_path)
-        else:
-            os.rmdir(real_path)
+        try:
+            if real_path.is_file():
+                os.remove(real_path)
+            else:
+                os.rmdir(real_path)
+        except FileNotFoundError:
+            # todo: more logging
+            raise ProviderException('No such file or directory')
 
     def rename(self, library: DataLibrary, path: str, name: str):
         if path and path[0] == '/':
             path = path[1:]
 
         user_dir = self.get_user_data_dir(library=library)
-        real_path = user_dir / Path(path)
+        real_path = (user_dir / Path(path)).resolve()
         new_path = real_path.parent / name
 
         if not real_path.is_relative_to(user_dir) or user_dir == real_path or new_path.exists():
