@@ -132,7 +132,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
-  BASE_DIR / 'web_dev_assets',
+    PROJECT_DIR / 'static',
+    BASE_DIR / 'web_dev_assets',
 )
 STATIC_ROOT = BASE_DIR / 'collected_static'
 
