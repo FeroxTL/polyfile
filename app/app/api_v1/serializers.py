@@ -68,7 +68,8 @@ class NodeSerializer(serializers.ModelSerializer):
         try:
             parent_node = get_node_by_path(root_node=library.root_dir, path=path)
         except Node.DoesNotExist as e:
-            raise exceptions.ValidationError({'path': str(e)})
+            # todo one style for all errors
+            raise exceptions.ValidationError({'detail': str(e)})
 
         content_type, _ = mimetypes.guess_type(str(file))
         mimetype, _ = Mimetype.objects.get_or_create(name=content_type or 'application/octet-stream')
@@ -136,7 +137,7 @@ class NodeMoveSerializer(serializers.ModelSerializer):
     def update(self, instance: Node, validated_data):
         library, source_path = itemgetter('library', 'path')(self.context)
         target_path = validated_data['target_path']
-        data_provider = get_data_provider(data_source=library.data_source)
+        # data_provider = get_data_provider(data_source=library.data_source)
         # super().update(instance, validated_data)
 
         try:
@@ -154,16 +155,14 @@ class NodeMoveSerializer(serializers.ModelSerializer):
 
         source_node.move(target_directory, pos='sorted-child')
 
-        return self.instance
-
-        try:
-            data_provider.move(
-                library=library,
-                source_path=path,
-                target_directory=target_directory,
-            )
-        except ProviderException as e:
-            raise exceptions.ValidationError(e)
+        # try:
+        #     data_provider.move(
+        #         library=library,
+        #         source_path=path,
+        #         target_directory=target_directory,
+        #     )
+        # except ProviderException as e:
+        #     raise exceptions.ValidationError(e)
 
         return self.instance
 

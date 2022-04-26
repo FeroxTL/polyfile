@@ -34,6 +34,10 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=256, verbose_name='Mimetype')),
             ],
+            options={
+                'verbose_name': 'Mime type',
+                'verbose_name_plural': 'Mime types',
+            },
         ),
         migrations.CreateModel(
             name='Node',

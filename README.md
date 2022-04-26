@@ -8,18 +8,26 @@
 ## Status
 Deep alpha version.
 
-## Running project in development
-Global requirements:
+## Running project
+### Global requirements:
 ```
 python 3.6+
+pillow
 nodejs 12+
 ```
-Installing and running:
 
-* Backend:
+### Installing and running:
+
+#### Dependencies
+`Pillow` is imaging library. Can be installed via package
+(`apt install python3-pil` in ubuntu/debian) or
+pip (`pip install Pillow`, but it requires `python3-dev`).
+See https://pillow.readthedocs.io/en/stable/installation.html for details
+
+##### Backend:
 ```
 # Setting up environment, run in project root directory
-python3 -m venv ./env
+python3 -m venv ./env --system-site-packages
 source ./env/bin/activate
 pip install -r requirements.txt
 
@@ -32,7 +40,7 @@ python ./manage.py createsuperuser
 python ./manage.py runserver
 ```
 
-* Frontend:
+##### Frontend:
 ```
 # Setting up environment, run in frontend directory
 cd frontend

@@ -1,5 +1,9 @@
+import tempfile
+import uuid
+from pathlib import Path
 from unittest import mock
 
+from PIL import Image
 from django.contrib import auth
 from django.urls import reverse
 from django.test import TestCase
@@ -255,6 +259,44 @@ class NodeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': f'Can not remove "{directory.name}": is not empty'})
 
+    def test_file_upload(self):
+        data_library = DataLibraryFactory(owner=self.user)
+        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
+        image = Image.new('RGB', (100, 100))
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
+            image.save(tmp_file)
+            tmp_file.seek(0)
+            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code, response.data)
+
+            tmp_path = Path(tmp_file.name)
+            self.assertDictEqual(response.json(), {
+                'name': tmp_path.name,
+                'file_type': 'file',
+                'mimetype': 'image/jpeg',
+                'size': tmp_path.stat().st_size,
+                'has_preview': False
+            })
+
+        # library does not exist
+        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(uuid.uuid4()), 'path': '/'})
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
+            image.save(tmp_file)
+            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code, response.data)
+            self.assertDictEqual(response.json(), {'detail': 'DataLibrary matching query does not exist.'})
+
+        # path does not exist
+        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist/'})
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
+            image.save(tmp_file)
+            tmp_file.seek(0)
+            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+            self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
+
 
 class ProviderTests(APITestCase):
     """Testing api and provider integration -- errors and exceptions."""
@@ -271,6 +313,7 @@ class ProviderTests(APITestCase):
         with mock.patch('app.utils.tests.TestProvider.mkdir') as p:
             p.side_effect = ProviderException('Something went wrong')
             response = self.client.post(url, data, format='json')
+            p.assert_called()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
 
@@ -282,5 +325,38 @@ class ProviderTests(APITestCase):
         with mock.patch('app.utils.tests.TestProvider.rm') as p:
             p.side_effect = ProviderException('Something went wrong')
             response = self.client.delete(url)
+            p.assert_called()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
+
+    def test_rename_node(self):
+        """Test provider exceptions on rename node."""
+        data_library = DataLibraryFactory(owner=self.user)
+        file = FileFactory(parent=data_library.root_dir)
+        url = reverse('api_v1:lib-rename', kwargs={'lib_id': str(data_library.pk), 'path': '/' + file.name})
+        data = {'name': 'FooBar'}
+
+        with mock.patch('app.utils.tests.TestProvider.rename') as p:
+            p.side_effect = ProviderException('Something went wrong')
+            response = self.client.put(url, data, format='json')
+            p.assert_called()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        # todo: make errors in single style
+        # self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
+
+    def test_file_upload(self):
+        data_library = DataLibraryFactory(owner=self.user)
+        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
+        image = Image.new('RGB', (100, 100))
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
+            image.save(tmp_file)
+            tmp_file.seek(0)
+            with mock.patch('app.utils.tests.TestProvider.upload_file') as p:
+                p.side_effect = ProviderException('Something went wrong')
+                response = self.client.post(url, {'file': tmp_file}, format='multipart')
+                p.assert_called()
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+            # todo: make errors in single style
+            # self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
