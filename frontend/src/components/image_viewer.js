@@ -2,6 +2,16 @@ import m from "mithril";
 import {modal} from "./bootstrap/modal";
 
 
+const NavLiItem = {
+  view: function(vnode) {
+    const {selector="button"} = vnode.attrs;
+    return (
+      m("li.nav-item", m(`${selector}.btn btn-outline-secondary mx-1`, vnode.attrs, vnode.children))
+    )
+  }
+};
+
+
 function showImageViewer({currentNode, nodeList = []} = {}) {
   const dragState = {
     zoom: 1,
@@ -184,11 +194,11 @@ function showImageViewer({currentNode, nodeList = []} = {}) {
               `${currentIndex + 1} / ${nodeList.length} | ${currentNode.name}`
             ),
             m("ul.navbar-nav", [
-              m("li.nav-item", m("a.nav-link[href=#]", {onclick: this.resetZoom.bind(null)}, m("i.fa-solid fa-down-left-and-up-right-to-center"))),
-              m("li.nav-item", m("a.nav-link[href=#]", {onclick: this.setZoom.bind(null, 0.5)}, m("i.fa-solid fa-magnifying-glass-plus"))),
-              m("li.nav-item", m("a.nav-link[href=#]", {onclick: this.setZoom.bind(null, -0.5)}, m("i.fa-solid fa-magnifying-glass-minus"))),
-              m("li.nav-item", m("a.nav-link[target=_blank]", {href: currentNode.downloadUrl}, m("i.fa-solid fa-arrow-down"))),
-              m("li.nav-item", {onclick: this.closeModal.bind(null, currentNode)}, m("a.nav-link[href=#]", m("i.fa-solid fa-xmark"))),
+              m(NavLiItem, {onclick: this.resetZoom.bind(null)}, m("i.fa-solid fa-down-left-and-up-right-to-center")),
+              m(NavLiItem, {onclick: this.setZoom.bind(null, 0.5)}, m("i.fa-solid fa-magnifying-glass-plus")),
+              m(NavLiItem, {onclick: this.setZoom.bind(null, -0.5)}, m("i.fa-solid fa-magnifying-glass-minus")),
+              m(NavLiItem, {selector: "a", href: currentNode.downloadUrl, target: "_blank"}, m("i.fa-solid fa-arrow-down")),
+              m(NavLiItem, {onclick: this.closeModal.bind(null, currentNode)}, m("i.fa-solid fa-xmark")),
             ]),
           ])
         )
