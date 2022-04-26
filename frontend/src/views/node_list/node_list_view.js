@@ -77,7 +77,11 @@ let RowFileItem = {
 
   onClickAction: function(node, e) {
     e.preventDefault();
-    showImageViewer({currentNode: node, nodeList: this.getImageList(globalNodesData.list)});
+    if (node.mimeType && node.mimeType.startsWith('image')) {
+      showImageViewer({currentNode: node, nodeList: this.getImageList(globalNodesData.list)});
+    } else {
+      location.href = node.downloadUrl;
+    }
   },
 
   view: function(vnode) {
