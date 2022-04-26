@@ -37,6 +37,7 @@ class DataLibraryInstanceSerializer(DataLibrarySerializer):
 class NodeSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True)
     mimetype = serializers.ReadOnlyField(source='mimetype.name', default=None)
+    has_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = Node
@@ -46,12 +47,17 @@ class NodeSerializer(serializers.ModelSerializer):
             'file_type',
             'mimetype',
             'size',
+            'has_preview',
         ]
         read_only_fields = [
             'name',
             'file_type',
             'size',
         ]
+
+    @staticmethod
+    def get_has_preview(instance: Node):
+        return False
 
     @transaction.atomic
     def create(self, validated_data: dict):

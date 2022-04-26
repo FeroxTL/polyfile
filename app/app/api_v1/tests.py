@@ -111,6 +111,7 @@ class NodeTests(APITestCase):
                 'size': current_node.size,
                 'name': current_node.name,
                 'mimetype': current_node.mimetype and current_node.mimetype.name,
+                'has_preview': False,
             },
             'library': {
                 'data_source': data_library.data_source.pk,
