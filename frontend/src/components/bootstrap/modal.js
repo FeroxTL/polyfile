@@ -1,16 +1,24 @@
 import m from "mithril";
 
 
-function Modal({buttons = [], title = "Modal", oncancel = null} = {}, content = null) {
-  let defaultOnCancel = () => (true);
-  oncancel = oncancel || defaultOnCancel;
-
+function Modal({
+  buttons = null,
+  title = "Modal",
+  modalDialogClass = null,
+  modalBodyClass = null,
+  headerComponent = null,
+} = {}, content = null) {
   this.modalDialog = {
     oncreate: (vnode) => {
-      setTimeout(() => {vnode.dom.classList.add("show")}, 0);
+      setTimeout(() => {
+          vnode.dom.classList.add("show");
+          document.body.classList.add("modal-open");
+        }, 0);
     },
     onbeforeremove: function(vnode) {
       vnode.dom.classList.remove("show");
+      document.body.classList.remove("modal-open");
+
       return new Promise(function(resolve) {
         vnode.dom.addEventListener("transitionend", resolve)
       })
@@ -23,14 +31,16 @@ function Modal({buttons = [], title = "Modal", oncancel = null} = {}, content = 
               if (e.target.classList.contains("modal")) this.close();
             }
           },
-          m("div.modal-dialog",
+          m("div.modal-dialog", {class: modalDialogClass},
             m("div.modal-content", [
-              m("div.modal-header", [
-                m("h5.modal-title", title),
-                m("button.btn-close[type=button]", {onclick: this.close}),
-              ]),
-              m("div.modal-body", content && m(content)),
-              m("div.modal-footer", buttons.map((button) => m(button)))
+              headerComponent ?
+                m(headerComponent) :
+                m("div.modal-header", [
+                  m("h5.modal-title", title),
+                  m("button.btn-close[type=button]", {onclick: this.close}),
+                ]),
+              m("div.modal-body", {class: modalBodyClass}, content && m(content)),
+              buttons && m("div.modal-footer", buttons.map((button) => m(button)))
             ])
           )
         )
@@ -54,10 +64,8 @@ function Modal({buttons = [], title = "Modal", oncancel = null} = {}, content = 
   };
 
   this.close = () => {
-    if (oncancel()) {
-      this.modalDialog = null;
-      this.modalBackdrop = null;
-    }
+    this.modalDialog = null;
+    this.modalBackdrop = null;
   };
 }
 

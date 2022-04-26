@@ -2,6 +2,7 @@ import {globalNodesData} from "../../models/nodes";
 import m from "mithril";
 import routes from "../../utils/routes";
 import {showNodeMenu} from "./node_modals";
+import showImageViewer from "../../components/image_viewer";
 
 
 let NodeItem = {
@@ -31,7 +32,7 @@ let RowDirectoryItem = {
   },
 
   view: function(vnode) {
-    let {node, key} = vnode.attrs;
+    let {node} = vnode.attrs;
 
     return (
       m("tr", [
@@ -57,15 +58,24 @@ let RowFileItem = {
     e.preventDefault();
     showNodeMenu(node);
   },
+  isImage: function(file) {
+    return file.mimetype && file.mimetype.startsWith('image/') || false;
+  },
+  getImageList: function(nodeList) {
+    return nodeList.filter(this.isImage)
+  },
 
-  view: function (vnode) {
-    let {key, node} = vnode.attrs;
+  onClickAction: function(node, e) {
+    e.preventDefault();
+    showImageViewer({currentNode: node, nodeList: this.getImageList(globalNodesData.list)});
+  },
+
+  view: function(vnode) {
+    let {node} = vnode.attrs;
 
     return (
       m("tr", [
-        m("td[role=button]", {onclick: () => {
-            location.href = "/api/v1/libraries/" + node.library.id + "/download" + node.fullPath;
-          }}, m(NodeItem, {
+        m("td[role=button]", {onclick: this.onClickAction.bind(this, node)}, m(NodeItem, {
           node: node,
           attributes: [`${node.size} bytes`]
         })),
@@ -106,7 +116,7 @@ let NodeListView = {
             m("th.col-1 p-0[scope=col]", "Options"),
           ])
         ),
-        m("tbody", nodes.map((item, i) => (m(RowItem, {node: item, key: i})))),
+        m("tbody", nodes.map((item) => (m(RowItem, {node: item})))),
       ])
     )
   }

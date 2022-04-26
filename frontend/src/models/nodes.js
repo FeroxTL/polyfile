@@ -7,6 +7,7 @@ function Node(data) {
   this.fileType = data["file_type"] || "unknown";
   this.library = data["library"] || null;
   this.size = data["size"] || null;
+  this.mimetype = data["mimetype"] || null;
 
   Object.defineProperty(this, 'isFile', {
     get: () => (this["fileType"] === "file")
@@ -16,6 +17,9 @@ function Node(data) {
   });
   Object.defineProperty(this, 'fullPath', {
     get: () => (this.path + this.name + (this.fileType === "directory" ? "/" : ""))
+  });
+  Object.defineProperty(this, 'downloadUrl', {
+    get: () => ("/api/v1/libraries/" + this.library.id + "/download" + this.fullPath)
   });
 }
 
