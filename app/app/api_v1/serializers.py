@@ -36,18 +36,20 @@ class DataLibraryInstanceSerializer(DataLibrarySerializer):
 
 class NodeSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True)
+    mimetype = serializers.ReadOnlyField(source='mimetype.name', default=None)
 
     class Meta:
         model = Node
         fields = [
+            'file',
             'name',
             'file_type',
-            'file',
+            'mimetype',
             'size',
         ]
         read_only_fields = [
-            'file_type',
             'name',
+            'file_type',
             'size',
         ]
 

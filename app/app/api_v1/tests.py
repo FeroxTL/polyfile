@@ -94,6 +94,8 @@ class LibraryTests(APITestCase):
 
 
 class NodeTests(APITestCase):
+    maxDiff = None
+
     def setUp(self) -> None:
         self.user = UserFactory()
         self.client.force_login(self.user)
@@ -108,6 +110,7 @@ class NodeTests(APITestCase):
                 'file_type': current_node.file_type,
                 'size': current_node.size,
                 'name': current_node.name,
+                'mimetype': current_node.mimetype and current_node.mimetype.name,
             },
             'library': {
                 'data_source': data_library.data_source.pk,

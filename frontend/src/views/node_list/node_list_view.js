@@ -3,15 +3,25 @@ import m from "mithril";
 import routes from "../../utils/routes";
 import {showNodeMenu} from "./node_modals";
 import showImageViewer from "../../components/image_viewer";
+import {MimeIcon, IconClasses} from "../../utils/mimetypes";
 
 
 let NodeItem = {
   view: function(vnode) {
-    let {node, attributes=[]} = vnode.attrs;
+    const {node, attributes=[]} = vnode.attrs;
+    const iconOptions = {};
+
+    if (node.isDirectory) {
+      iconOptions["iconClass"] = IconClasses.directory;
+    } else {
+      iconOptions["mimeType"] = node.mimeType || "";
+    }
 
     return (
       m(".d-table", [
-        m("div.d-table-cell align-middle text-center", m("i.fa-solid fa-box text-secondary h3")),
+        m("div.d-table-cell align-middle text-center",
+          m(MimeIcon, {class: "text-secondary h3", ...iconOptions})
+        ),
         m("div.d-table-cell ps-2", [
           m("b.text-break", node.name),
           attributes.map((attr) => ([
@@ -59,7 +69,7 @@ let RowFileItem = {
     showNodeMenu(node);
   },
   isImage: function(file) {
-    return file.mimetype && file.mimetype.startsWith('image/') || false;
+    return file.mimeType && file.mimeType.startsWith('image/') || false;
   },
   getImageList: function(nodeList) {
     return nodeList.filter(this.isImage)

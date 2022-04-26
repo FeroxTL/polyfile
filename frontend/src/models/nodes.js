@@ -7,7 +7,7 @@ function Node(data) {
   this.fileType = data["file_type"] || "unknown";
   this.library = data["library"] || null;
   this.size = data["size"] || null;
-  this.mimetype = data["mimetype"] || null;
+  this.mimeType = data["mimetype"] || null;
 
   Object.defineProperty(this, 'isFile', {
     get: () => (this["fileType"] === "file")
