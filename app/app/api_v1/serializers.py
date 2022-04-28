@@ -1,6 +1,7 @@
 import mimetypes
 from operator import itemgetter
 
+from django.core.exceptions import SuspiciousFileOperation
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from rest_framework import serializers, exceptions
@@ -63,7 +64,7 @@ class NodeSerializer(serializers.ModelSerializer):
     def create(self, validated_data: dict):
         file: UploadedFile = validated_data['file']
         library, path = itemgetter('library', 'path')(self.context)
-        data_provider = get_data_provider(data_source=library.data_source)
+        data_provider = get_data_provider(library=library)
 
         try:
             parent_node = get_node_by_path(root_node=library.root_dir, path=path)
@@ -81,11 +82,7 @@ class NodeSerializer(serializers.ModelSerializer):
         )
 
         try:
-            data_provider.upload_file(
-                library=library,
-                path=path,
-                uploaded_file=file
-            )
+            data_provider.upload_file(path=path, uploaded_file=file)
         except ProviderException as e:
             raise exceptions.ValidationError(e)
 
@@ -189,16 +186,12 @@ class NodeRenameSerializer(serializers.ModelSerializer):
     def update(self, instance: Node, validated_data):
         library, path = itemgetter('library', 'path')(self.context)
         name = validated_data['name']
-        data_provider = get_data_provider(data_source=library.data_source)
+        data_provider = get_data_provider(library=library)
 
         super().update(instance, validated_data)
 
         try:
-            data_provider.rename(
-                library=library,
-                path=path,
-                name=name,
-            )
+            data_provider.rename(path=path, name=name)
         except ProviderException as e:
             raise exceptions.ValidationError(e)
 
@@ -240,7 +233,7 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         library, path, name = itemgetter('library', 'path', 'name')(validated_data)
-        data_provider = get_data_provider(data_source=library.data_source)
+        data_provider = get_data_provider(library=library)
 
         try:
             parent_node = get_node_by_path(root_node=library.root_dir, path=path)
@@ -253,8 +246,9 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         )
 
         try:
-            data_provider.mkdir(library=library, path=path, name=name)
-        except ProviderException as e:
-            raise exceptions.ParseError(e)
+            data_provider.mkdir(path=path, name=name)
+        except SuspiciousFileOperation:
+            # todo: logging.exception(e)
+            raise exceptions.ParseError('Something went wrong')
 
         return node

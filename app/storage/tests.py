@@ -1,6 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from django.core.exceptions import SuspiciousFileOperation
 from django.test import TestCase
 
 from storage.data_providers.exceptions import ProviderException
@@ -58,8 +59,9 @@ class FileSystemStorageProviderTests(TestCase):
                 data_provider_id=FileSystemStorageProvider.provider_id,
                 options={'root_directory': f},
             )
+            library = DataLibraryFactory(data_source=data_source)
 
-            provider = get_data_provider(data_source=data_source)
+            provider = get_data_provider(library=library)
             provider.init_provider()
 
             self.assertTrue(isinstance(provider, FileSystemStorageProvider))
@@ -67,111 +69,127 @@ class FileSystemStorageProviderTests(TestCase):
             self.assertTrue((Path(f) / 'data').exists())
 
             # users library
-            library = DataLibraryFactory()
-            provider.init_library(library=library)
+            provider.init_library()
             self.assertTrue((Path(f) / 'data' / str(library.pk) / 'files').exists())
 
     def test_mkdir(self):
         """Ensure we can make directories in storage."""
         with TemporaryDirectory() as f:
-            provider = FileSystemStorageProvider(options={'root_directory': f})
+            provider = FileSystemStorageProvider(library=DataLibraryFactory(), options={'root_directory': f})
             provider.init_provider()
             dir_name = 'FooBar'
-            library = DataLibraryFactory()
-            provider.init_library(library)
+            provider.init_library()
 
             # mkdir
-            realpath = provider.mkdir(library=library, path='/', name=dir_name)
-            self.assertEqual(realpath, Path(f) / 'data' / str(library.pk) / 'files' / dir_name)
+            realpath = provider.mkdir(path='/', name=dir_name)
+            self.assertEqual(realpath, Path(f) / 'data' / str(provider.library.pk) / 'files' / dir_name)
             self.assertTrue(realpath.exists())
 
             # suspicious mkdir
-            with self.assertRaises(ProviderException) as e:
-                provider.mkdir(library=library, path='/', name='../foobar/')
-            self.assertEqual(str(e.exception), 'Suspicious operation')
+            with self.assertRaises(SuspiciousFileOperation):
+                provider.mkdir(path='/', name='../foobar/')
 
             # relative path
             dir_name2 = 'FooBar2'
-            realpath = provider.mkdir(library=library, path=dir_name, name=dir_name2)
-            self.assertEqual(realpath, Path(f) / 'data' / str(library.pk) / 'files' / dir_name / dir_name2)
+            realpath = provider.mkdir(path=dir_name, name=dir_name2)
+            self.assertEqual(realpath, Path(f) / 'data' / str(provider.library.pk) / 'files' / dir_name / dir_name2)
             self.assertTrue(realpath.exists())
 
             # directory already exists
             with self.assertRaises(ProviderException) as e:
-                provider.mkdir(library=library, path=dir_name, name=dir_name2)
+                provider.mkdir(path=dir_name, name=dir_name2)
             self.assertEqual(str(e.exception), 'directory already exists')
 
     def test_rm(self):
         """Ensure we can remove nodes in storage."""
         with TemporaryDirectory() as f:
-            provider = FileSystemStorageProvider(options={'root_directory': f})
+            provider = FileSystemStorageProvider(library=DataLibraryFactory(), options={'root_directory': f})
             provider.init_provider()
             dir_name = 'FooBar'
-            library = DataLibraryFactory()
-            provider.init_library(library)
-            root_path = Path(f) / 'data' / str(library.pk) / 'files'
+            provider.init_library()
+            root_path = Path(f) / 'data' / str(provider.library.pk) / 'files'
 
             # rmdir
             realpath = root_path / dir_name
             realpath.mkdir()
-            provider.rm(library=library, path=f'/{dir_name}/')
+            provider.rm(path=f'/{dir_name}/')
             self.assertFalse(realpath.exists())
 
             # rmdir relative path
             realpath = root_path / dir_name
             realpath.mkdir()
-            provider.rm(library=library, path=f'{dir_name}/')
+            provider.rm(path=f'{dir_name}/')
             self.assertFalse(realpath.exists())
 
             # rm file
             realpath = root_path / dir_name
             realpath.touch()
-            provider.rm(library=library, path=f'{dir_name}/')
+            provider.rm(path=f'{dir_name}/')
             self.assertFalse(realpath.exists())
 
             # rmdir root directory
             with self.assertRaises(ProviderException):
-                provider.rm(library=library, path='/')
+                provider.rm(path='/')
             with self.assertRaises(ProviderException):
-                provider.rm(library=library, path='')
+                provider.rm(path='')
 
-            # rm directory that does not exist
-            with self.assertRaises(ProviderException):
-                provider.rm(library=library, path='/does-not-exist/')
+            # rm directory that does not exist (that is ok)
+            provider.rm(path='/does-not-exist/')
 
     def test_rename(self):
         """Ensure we can rename files/directories in storage."""
         with TemporaryDirectory() as f:
-            provider = FileSystemStorageProvider(options={'root_directory': f})
+            provider = FileSystemStorageProvider(library=DataLibraryFactory(), options={'root_directory': f})
             provider.init_provider()
             dir_name = 'FooBar'
-            library = DataLibraryFactory()
-            provider.init_library(library)
-            root_path = Path(f) / 'data' / str(library.pk) / 'files'
+            provider.init_library()
+            root_path = Path(f) / 'data' / str(provider.library.pk) / 'files'
 
             # rename directory
             realpath = root_path / dir_name
             realpath.mkdir()
             new_dir_name = 'BarBaz'
-            provider.rename(library=library, path=f'/{dir_name}/', name=new_dir_name)
+            provider.rename(path=f'/{dir_name}/', name=new_dir_name)
             self.assertFalse(realpath.exists())
             realpath = root_path / new_dir_name
             self.assertTrue(realpath.exists())
             realpath.rmdir()
 
             # rename root directory
-            with self.assertRaises(ProviderException):
-                provider.rename(library=library, path='/', name=new_dir_name)
+            with self.assertRaises(SuspiciousFileOperation):
+                provider.rename(path='/', name=new_dir_name)
 
-            with self.assertRaises(ProviderException):
-                provider.rename(library=library, path='/../', name=new_dir_name)
+            with self.assertRaises(SuspiciousFileOperation):
+                provider.rename(path='/../', name=new_dir_name)
 
             # Rename relative path
             realpath = root_path / dir_name
             realpath.mkdir()
             new_dir_name = 'BarBaz'
-            provider.rename(library=library, path=f'{dir_name}/', name=new_dir_name)
+            provider.rename(path=f'{dir_name}/', name=new_dir_name)
             self.assertFalse(realpath.exists())
             realpath = root_path / new_dir_name
             self.assertTrue(realpath.exists())
             realpath.rmdir()
+
+            # rename, but already exists
+            realpath = root_path / dir_name
+            realpath.mkdir()
+            new_path = root_path / 'BarBaz'
+            new_path.mkdir()
+            with self.assertRaises(SuspiciousFileOperation):
+                provider.rename(path=str(dir_name), name=new_path.name)
+
+            realpath.rmdir()
+            new_path.rmdir()
+
+            # Rename to something strange
+            realpath = root_path / dir_name
+            realpath.mkdir()
+            foo_dir = root_path / 'foo'
+            foo_dir.mkdir()
+
+            new_dir_name = 'foo/BarBaz'
+
+            with self.assertRaises(SuspiciousFileOperation):
+                provider.rename(path=str(dir_name), name=new_dir_name)

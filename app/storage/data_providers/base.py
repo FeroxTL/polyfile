@@ -1,8 +1,7 @@
 import typing
-from pathlib import Path
 
+from django.core.files import File
 from django.core.files.uploadedfile import UploadedFile
-
 from storage.models import DataLibrary
 
 
@@ -15,36 +14,36 @@ class BaseProvider:
     def verbose_name(self) -> str:
         raise NotImplementedError
 
+    def __init__(self, library: DataLibrary, options: dict):
+        super().__init__()
+        self.library = library
+        self.options = options
+
     def __str__(self):
         return self.verbose_name
-
-    def __init__(self, options: dict):
-        self.options = options
 
     def init_provider(self):
         pass
 
-    def init_library(self, library: DataLibrary):
+    def init_library(self):
         pass
 
-    def list_files(self, library: DataLibrary, path: str):
+    def list_files(self, path: str):
         raise NotImplementedError
 
-    def upload_file(self, library: DataLibrary, path: str, uploaded_file: UploadedFile):
+    def upload_file(self, path: str, uploaded_file: UploadedFile):
         raise NotImplementedError
 
-    def download_file(self, library: DataLibrary, path: str) -> Path:
-        # Todo: pathlib.Path is only for test purposes. We should use more abstract object, but
-        #  api methods in storages were not stabilized yet.
+    def open_file(self, path: str) -> File:
         raise NotImplementedError
 
-    def mkdir(self, library: DataLibrary, path: str, name: str):
+    def mkdir(self, path: str, name: str):
         raise NotImplementedError
 
-    def rm(self, library: DataLibrary, path: str):
+    def rm(self, path: str):
         raise NotImplementedError
 
-    def rename(self, library: DataLibrary, path: str, name: str):
+    def rename(self, path: str, name: str):
         raise NotImplementedError
 
 

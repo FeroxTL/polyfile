@@ -1,6 +1,7 @@
-import os
 from pathlib import Path
 
+from django.core.files import File
+from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import UploadedFile
 
 from storage.data_providers.base import BaseProvider
@@ -12,9 +13,9 @@ class FileSystemStorageProvider(BaseProvider):
     provider_id = 'FileStorage'
     verbose_name = 'Disk File Storage'
 
-    def __init__(self, options: dict):
-        super().__init__(options=options)
+    def __init__(self, library: DataLibrary, options: dict):
         self.root_directory = Path(options['root_directory'])
+        super().__init__(library=library, options=options)
 
     @property
     def data_directory(self) -> Path:
@@ -29,65 +30,52 @@ class FileSystemStorageProvider(BaseProvider):
         self.tmp_directory.mkdir(exist_ok=True)
         self.data_directory.mkdir(exist_ok=True)
 
-    def init_library(self, library: DataLibrary):
-        self.get_user_root_directory(library=library).mkdir(exist_ok=True)
-        self.get_user_data_dir(library=library).mkdir(exist_ok=True)
+    def init_library(self):
+        storage = self.get_user_storage()
+        Path(storage.path('')).mkdir(parents=True, exist_ok=True)
 
-    def get_user_root_directory(self, library: DataLibrary):
-        return self.data_directory / Path(str(library.pk))
+    def _get_relative_user_data_directory(self) -> Path:
+        return Path('data') / str(self.library.pk) / 'files'
 
-    def get_user_data_dir(self, library: DataLibrary):
-        return self.get_user_root_directory(library=library) / 'files'
+    def get_user_storage(self):
+        """Storage with root in user directory."""
+        return FileSystemStorage(location=self.root_directory / self._get_relative_user_data_directory())
 
-    def list_files(self, library: DataLibrary, path: str):
-        user_dir = self.get_user_data_dir(library=library)
-        real_path = (user_dir / Path(path)).resolve()
+    def list_files(self, path: str):
+        # todo -- what for?
+        storage = self.get_user_storage()
+        return storage.listdir(path)
 
-        if not real_path.is_relative_to(user_dir):
-            raise ProviderException('Suspicious operation')
-
-        try:
-            return list(real_path.iterdir())
-        except FileNotFoundError:
-            raise ProviderException('File does not exist')
-
-    def upload_file(self, library: DataLibrary, path: str, uploaded_file: UploadedFile):
+    def upload_file(self, path: str, uploaded_file: UploadedFile):
         if path and path[0] == '/':
             path = path[1:]
 
-        user_dir = self.get_user_data_dir(library=library)
-        real_path = (user_dir / Path(path) / Path(uploaded_file.name)).resolve()
+        storage = self.get_user_storage()
+        path_name = Path(path) / uploaded_file.name
 
-        if not real_path.is_relative_to(user_dir):
-            raise ProviderException('Suspicious operation')
-
-        if real_path.exists():
+        if storage.exists(path_name):
             raise ProviderException('file already exists')
 
-        real_path.write_bytes(uploaded_file.file.read())
-        return path
+        return storage.save(path_name, content=uploaded_file)
 
-    def download_file(self, library: DataLibrary, path: str) -> Path:
+    def open_file(self, path: str) -> File:
         if path and path[0] == '/':
             path = path[1:]
 
-        user_dir = self.get_user_data_dir(library=library)
-        real_path = (user_dir / Path(path)).resolve()
-
-        if not real_path.is_relative_to(user_dir):
+        if not path:
             raise ProviderException('Suspicious operation')
 
-        return real_path
+        storage = self.get_user_storage()
+        return storage.open(path)
 
-    def mkdir(self, library: DataLibrary, path: str, name: str):
+    def mkdir(self, path: str, name: str):
+        # todo: remove 'name' argument
         if path and path[0] == '/':
             path = path[1:]
 
-        user_dir = self.get_user_data_dir(library=library)
-        real_path = (user_dir / Path(path) / Path(name)).resolve()
-
-        if not real_path.is_relative_to(user_dir):
-            raise ProviderException('Suspicious operation')
+        storage = self.get_user_storage()
+        path_name = Path(path) / name
+        real_path = Path(storage.path(path_name))
 
         if real_path.exists():
             raise ProviderException('directory already exists')
@@ -95,34 +83,31 @@ class FileSystemStorageProvider(BaseProvider):
         real_path.mkdir()
         return real_path
 
-    def rm(self, library: DataLibrary, path: str):
+    def rm(self, path: str):
         if path and path[0] == '/':
             path = path[1:]
 
-        user_dir = self.get_user_data_dir(library=library)
-        real_path = (user_dir / Path(path)).resolve()
-
-        if not real_path.is_relative_to(user_dir) or user_dir == real_path:
+        if not path:
             raise ProviderException('Suspicious operation')
 
-        try:
-            if real_path.is_file():
-                os.remove(real_path)
-            else:
-                os.rmdir(real_path)
-        except FileNotFoundError:
-            # todo: more logging
-            raise ProviderException('No such file or directory')
+        storage = self.get_user_storage()
+        storage.delete(path)
 
-    def rename(self, library: DataLibrary, path: str, name: str):
+    def rename(self, path: str, name: str):
         if path and path[0] == '/':
             path = path[1:]
 
-        user_dir = self.get_user_data_dir(library=library)
-        real_path = (user_dir / Path(path)).resolve()
-        new_path = real_path.parent / name
-
-        if not real_path.is_relative_to(user_dir) or user_dir == real_path or new_path.exists():
+        if not path or not name:
             raise ProviderException('Suspicious operation')
 
-        real_path.replace(new_path)
+        storage = self.get_user_storage()
+        real_path = Path(storage.path(path))
+        new_path = Path(storage.path(real_path.parent / name))
+
+        if new_path.parent != real_path.parent:
+            raise ProviderException('Suspicious operation')
+
+        if storage.exists(new_path):
+            raise ProviderException('Suspicious operation')
+
+        real_path.rename(new_path)

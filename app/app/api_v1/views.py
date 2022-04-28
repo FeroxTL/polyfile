@@ -1,9 +1,9 @@
 # todo: make errors in one style maybe {"message": "error message"}
-import mimetypes
 import typing
-from pathlib import Path
 from uuid import UUID
 
+from django.core.exceptions import SuspiciousFileOperation
+from django.core.files import File
 from django.db import transaction, models
 from django.db.models import Case, When
 from django.http import FileResponse, Http404
@@ -15,7 +15,6 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from storage.data_providers.exceptions import ProviderException
 from storage.data_providers.utils import get_data_provider
 from storage.models import DataLibrary, Node
 from storage.utils import remove_node, get_node_by_path
@@ -45,8 +44,8 @@ class DataLibraryListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         root_dir = Node.add_root(name='', file_type=Node.FileTypeChoices.DIRECTORY)
         serializer.save(owner=self.request.user, root_dir=root_dir)
-        provider = get_data_provider(serializer.instance.data_source)
-        provider.init_library(library=serializer.instance)
+        provider = get_data_provider(library=serializer.instance)
+        provider.init_library()
 
 
 class DataLibraryDetailUpdateView(generics.RetrieveUpdateAPIView):
@@ -232,7 +231,7 @@ class DataLibraryRmFileView(generics.DestroyAPIView):
             remove_node(library=library, path=path)
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
             raise exceptions.NotFound(str(e))
-        except ProviderException as e:
+        except SuspiciousFileOperation as e:
             raise exceptions.ParseError(str(e))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -250,23 +249,18 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
 
         try:
             library = self.get_library(self.kwargs[self.lookup_url_kwarg])
-            provider = get_data_provider(library.data_source)
-            fullpath: Path = provider.download_file(library=library, path=path)
-            stat_obj = fullpath.stat()
+            provider = get_data_provider(library)
+            node = get_node_by_path(library.root_dir, path, last_node_type=Node.FileTypeChoices.FILE)
+            file: File = provider.open_file(path=path)
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
             raise exceptions.NotFound(str(e))
-        except ProviderException as e:
+        except SuspiciousFileOperation as e:
             raise exceptions.ParseError(str(e))
 
-        # todo: content_type = current_node.mime_type.name
-        # print(http_date(stat_obj.st_mtime), stat_obj.st_mtime)
-        # print(http_date(current_node.updated_at.timestamp()))
-
-        content_type, encoding = mimetypes.guess_type(str(fullpath))
-        content_type = content_type or 'application/octet-stream'
-        response = FileResponse(fullpath.open('rb'), content_type=content_type)
-
-        response.headers["Last-Modified"] = http_date(stat_obj.st_mtime)
-        if encoding:
-            response.headers["Content-Encoding"] = encoding
+        content_type = node.mimetype and node.mimetype.name or 'application/octet-stream'
+        response = FileResponse(
+            file.open('rb'),
+            content_type=content_type,
+            headers={'Last-Modified': http_date(node.updated_at.timestamp())}
+        )
         return response

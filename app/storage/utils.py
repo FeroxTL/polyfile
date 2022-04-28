@@ -20,7 +20,7 @@ from storage.models import Node, DataLibrary
 #     return '/'.join(path_list)
 
 
-def get_node_by_path(root_node: Node, path: str) -> Node:
+def get_node_by_path(root_node: Node, path: str, last_node_type: str = None) -> Node:
     """
     Get node by path in root directory.
 
@@ -49,6 +49,10 @@ def get_node_by_path(root_node: Node, path: str) -> Node:
             extra_params = {'file_type': Node.FileTypeChoices.DIRECTORY}
         current_node = current_node.get_children().get(name=path_item, **extra_params)
 
+    if last_node_type is not None:
+        if current_node.file_type != last_node_type:
+            raise Node.DoesNotExist('Incorrect node type')
+
     return current_node
 
 
@@ -62,7 +66,7 @@ def remove_node(library: DataLibrary, path: str):
     :exception Node.DoesNotExist -- can not get Node by path
     :exception ProviderException -- can not remove Node
     """
-    data_provider = get_data_provider(data_source=library.data_source)
+    data_provider = get_data_provider(library=library)
     current_node = get_node_by_path(root_node=library.root_dir, path=path)
 
     if current_node == library.root_dir:
@@ -75,4 +79,4 @@ def remove_node(library: DataLibrary, path: str):
 
     with transaction.atomic():
         current_node.delete()
-        data_provider.rm(library=library, path=path)
+        data_provider.rm(path=path)
