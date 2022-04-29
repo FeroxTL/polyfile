@@ -78,6 +78,35 @@ class FileSystemStorageProviderTests(TestCase):
             provider.init_library()
             self.assertTrue((Path(f) / 'data' / str(library.pk) / 'files').exists())
 
+    def test_invalid_options(self):
+        """Ensure FileSystemStorageProvider correctly validates its options."""
+        with TemporaryDirectory() as f:
+            data_source = DataSourceFactory(
+                data_provider_id=FileSystemStorageProvider.provider_id,
+                options={'root_directory': f},
+            )
+            library = DataLibraryFactory(data_source=data_source)
+            not_existent_path = Path(f) / 'does-not-exist'
+
+            provider = get_data_provider(library=library)
+            provider.validate_options(data_source.options_dict)
+
+            # directory does not exist
+            with self.assertRaises(ProviderOptionError) as e:
+                provider.validate_options({'root_directory': not_existent_path})
+
+            self.assertDictEqual(e.exception.message_dict, {
+                'root_directory': [f'"{not_existent_path}" is not directory or does not exist']
+            })
+
+            # directory is not provided
+            with self.assertRaises(ProviderOptionError) as e:
+                provider.validate_options({})
+
+            self.assertDictEqual(e.exception.message_dict, {
+                'root_directory': ['This option is required']
+            })
+
     def test_file_upload(self):
         """Ensure we can upload files to storage."""
         with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file, TemporaryDirectory() as f:
@@ -261,7 +290,7 @@ class DataSourceAdminTest(TestCase):
         data_source = DataSource.objects.get()
         self.assertEqual(data_source.name, 'FooBar')
         self.assertEqual(data_source.data_provider_id, TestProvider.provider_id)
-        self.assertDictEqual(dict(data_source.options.all().values_list('key', 'value')), {'foo': 'bar'})
+        self.assertDictEqual(data_source.options_dict, {'foo': 'bar'})
 
     def test_datasource_update(self):
         """Ensure we can update DataSource."""

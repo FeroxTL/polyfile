@@ -34,6 +34,10 @@ class DataSource(models.Model):
     def __str__(self):
         return self.name or '<empty name>'
 
+    @property
+    def options_dict(self) -> dict:
+        return dict(self.options.values_list('key', 'value'))
+
 
 class DataSourceOption(models.Model):
     id = models.AutoField(primary_key=True)
