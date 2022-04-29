@@ -11,6 +11,7 @@ let TopNavBarNodeMenu = {
   },
   uploadFile: function (e) {
     let file = e.target.files[0];
+    const path = globalNodesData.currentPath;
 
     let body = new FormData();
     body.append("file", file);
@@ -20,14 +21,14 @@ let TopNavBarNodeMenu = {
       url: "/api/v1/libraries/:lib_id/upload:path...",
       params: {
         lib_id: m.route.param("lib_id"),
-        path: "/",
+        path: path,
       },
       body: body,
       headers: {
         'X-CSRFToken': getCookie('csrftoken'),
       }
     }).then((data) => {
-      globalNodesData.addNode(new Node({library: globalNodesData.library, ...data}));
+      globalNodesData.addNode(new Node({library: globalNodesData.library, path: path, ...data}));
       return data;
     })
   },

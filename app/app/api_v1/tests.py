@@ -204,6 +204,7 @@ class NodeTests(APITestCase):
             'created_at': drf_dt(directory.created_at),
             'updated_at': drf_dt(directory.updated_at),
             'name': data['name'],
+            'has_preview': False,
         })
 
         # mkdir with invalid name

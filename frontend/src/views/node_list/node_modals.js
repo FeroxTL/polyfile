@@ -23,7 +23,7 @@ function showCreateDirectoryModal(lib_id, path) {
             'X-CSRFToken': getCookie('csrftoken'),
           }
         }).then((data) => {
-          globalNodesData.addNode(new Node({library: globalNodesData.library, ...data}));
+          globalNodesData.addNode(new Node({library: globalNodesData.library, path: path,  ...data}));
           return data;
         })
       )

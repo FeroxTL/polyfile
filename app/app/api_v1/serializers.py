@@ -206,6 +206,7 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         label=get_field(Node, 'name').verbose_name,
         # todo: should add regexp to check name?
     )
+    has_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = Node
@@ -215,6 +216,7 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'size',
+            'has_preview',
         ]
         read_only_fields = [
             'file_type',
@@ -229,6 +231,10 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         if name in ['.', '..']:
             raise exceptions.ValidationError('This name is invalid')
         return name
+
+    @staticmethod
+    def get_has_preview(instance: Node):
+        return False
 
     @transaction.atomic
     def create(self, validated_data):
