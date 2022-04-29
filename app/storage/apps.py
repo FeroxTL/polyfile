@@ -6,6 +6,6 @@ class StorageConfig(AppConfig):
     name = 'storage'
 
     def ready(self):
-        from storage.data_providers.base import provider_register
+        from storage.data_providers.base import provider_registry
         from storage.data_providers.file_storage import FileSystemStorageProvider
-        provider_register.register(FileSystemStorageProvider)
+        provider_registry.register(FileSystemStorageProvider)

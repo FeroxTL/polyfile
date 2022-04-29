@@ -32,7 +32,7 @@ class DataSource(models.Model):
     objects = models.Manager()
 
     def __str__(self):
-        return self.name
+        return self.name or '<empty name>'
 
 
 class DataSourceOption(models.Model):

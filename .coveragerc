@@ -11,7 +11,6 @@ omit =
     app/manage.py
     app/app/asgi.py
     app/app/wsgi.py
-    */admin.py
 
 [report]
 # Regexes for lines to exclude from consideration

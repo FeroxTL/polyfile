@@ -1,11 +1,12 @@
 from django import forms
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from django.forms import ModelForm, ChoiceField
 from treebeard.admin import TreeAdmin
 from treebeard.forms import movenodeform_factory
 
-from storage.data_providers.base import provider_register
-from storage.data_providers.utils import get_data_provider
+from storage.data_providers.base import provider_registry
+from storage.data_providers.utils import get_data_provider, get_data_provider_class
 from storage.models import DataLibrary, DataSource, DataSourceOption, Node
 
 
@@ -19,7 +20,7 @@ class DataSourceAdminForm(ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['data_provider_id'].choices = [
             (p.provider_id, p.verbose_name)
-            for p in provider_register.providers
+            for p in provider_registry.providers
         ]
         if self.instance.pk is not None:
             self.fields['data_provider_id'].disabled = True
@@ -33,16 +34,26 @@ class CompositionElementFormSet(forms.BaseInlineFormSet):
             # invalid form data
             return
 
+        data_provider_id = self.instance.data_provider_id
         options = {}
         for data in self.cleaned_data:
-            if all(map(lambda x: x in data, ['DELETE', 'key', 'value'])):
+            if all(map(lambda x: x in data, ['DELETE', 'key', 'value', 'data_source'])):
+                # skip deleting fields
                 if data['DELETE']:
                     continue
 
                 options[data['key']] = data['value']
 
-        # todo validate options by its data provider
-        print(options)
+        data_provider = get_data_provider_class(data_provider_id)
+        try:
+            data_provider.validate_options(options=options)
+        except ValidationError as e:
+            message_list = [
+                f'{key}: {error}'
+                for key, error_list in e.message_dict.items()
+                for error in error_list
+            ]
+            raise ValidationError(message_list)
 
 
 class DataSourceOptionAdmin(admin.TabularInline):
@@ -61,7 +72,8 @@ class DataSourceAdmin(admin.ModelAdmin):
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         if not change:
-            provider = get_data_provider(form.instance)
+            library = DataLibrary(data_source=form.instance)
+            provider = get_data_provider(library)
             provider.init_provider()
 
 
@@ -75,8 +87,8 @@ class LibraryAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if not change:
-            provider = get_data_provider(obj.data_source)
-            provider.init_library(library=obj)
+            provider = get_data_provider(obj)
+            provider.init_library()
 
 
 @admin.register(Node)

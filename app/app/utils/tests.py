@@ -4,7 +4,7 @@ from django.core.files.storage import Storage
 from django.core.files.uploadedfile import UploadedFile
 from rest_framework.fields import DateTimeField
 
-from storage.data_providers.base import BaseProvider, provider_register
+from storage.data_providers.base import BaseProvider, provider_registry
 
 
 def drf_dt(dt) -> str:
@@ -37,4 +37,4 @@ class TestProvider(BaseProvider):
         pass
 
 
-provider_register.register(TestProvider)
+provider_registry.register(TestProvider)

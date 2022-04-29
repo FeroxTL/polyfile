@@ -5,7 +5,7 @@ from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import UploadedFile
 
 from storage.data_providers.base import BaseProvider
-from storage.data_providers.exceptions import ProviderException
+from storage.data_providers.exceptions import ProviderException, ProviderOptionError
 from storage.models import DataLibrary
 
 
@@ -16,6 +16,16 @@ class FileSystemStorageProvider(BaseProvider):
     def __init__(self, library: DataLibrary, options: dict):
         self.root_directory = Path(options['root_directory'])
         super().__init__(library=library, options=options)
+
+    @classmethod
+    def validate_options(cls, options: dict):
+        root_directory = options.get('root_directory', None)
+        if root_directory is None:
+            raise ProviderOptionError({'root_directory': 'This option is required'})
+
+        root_directory = Path(root_directory)
+        if not root_directory.exists() or not root_directory.is_dir():
+            raise ProviderOptionError({'root_directory': f'"{root_directory}" is not directory or does not exist'})
 
     @property
     def data_directory(self) -> Path:
@@ -37,8 +47,14 @@ class FileSystemStorageProvider(BaseProvider):
     def _get_relative_user_data_directory(self) -> Path:
         return Path('data') / str(self.library.pk) / 'files'
 
+    @staticmethod
+    def _path_to_rel_path(path: str):
+        if path and path[0] == '/':
+            return path[1:]
+        return path
+
     def get_user_storage(self):
-        """Storage with root in user directory."""
+        """Storage with location root in user directory."""
         return FileSystemStorage(location=self.root_directory / self._get_relative_user_data_directory())
 
     def list_files(self, path: str):
@@ -47,9 +63,7 @@ class FileSystemStorageProvider(BaseProvider):
         return storage.listdir(path)
 
     def upload_file(self, path: str, uploaded_file: UploadedFile):
-        if path and path[0] == '/':
-            path = path[1:]
-
+        path = self._path_to_rel_path(path)
         storage = self.get_user_storage()
         path_name = Path(path) / uploaded_file.name
 
@@ -59,8 +73,7 @@ class FileSystemStorageProvider(BaseProvider):
         return storage.save(path_name, content=uploaded_file)
 
     def open_file(self, path: str) -> File:
-        if path and path[0] == '/':
-            path = path[1:]
+        path = self._path_to_rel_path(path)
 
         if not path:
             raise ProviderException('Suspicious operation')
@@ -70,9 +83,7 @@ class FileSystemStorageProvider(BaseProvider):
 
     def mkdir(self, path: str, name: str):
         # todo: remove 'name' argument
-        if path and path[0] == '/':
-            path = path[1:]
-
+        path = self._path_to_rel_path(path)
         storage = self.get_user_storage()
         path_name = Path(path) / name
         real_path = Path(storage.path(path_name))
@@ -84,8 +95,7 @@ class FileSystemStorageProvider(BaseProvider):
         return real_path
 
     def rm(self, path: str):
-        if path and path[0] == '/':
-            path = path[1:]
+        path = self._path_to_rel_path(path)
 
         if not path:
             raise ProviderException('Suspicious operation')
@@ -94,8 +104,7 @@ class FileSystemStorageProvider(BaseProvider):
         storage.delete(path)
 
     def rename(self, path: str, name: str):
-        if path and path[0] == '/':
-            path = path[1:]
+        path = self._path_to_rel_path(path)
 
         if not path or not name:
             raise ProviderException('Suspicious operation')

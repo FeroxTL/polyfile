@@ -28,6 +28,10 @@ class BaseProvider:
     def init_library(self):
         pass
 
+    @classmethod
+    def validate_options(cls, options: dict):
+        pass
+
     def list_files(self, path: str):
         raise NotImplementedError
 
@@ -64,4 +68,4 @@ class ProviderRegister:
         return self._registry.values()
 
 
-provider_register = ProviderRegister()
+provider_registry = ProviderRegister()
