@@ -11,18 +11,6 @@ SECRET_KEY = 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m
 DEBUG = True
 ALLOWED_HOSTS = []
 
-
-# Global file storages
-DATA_PROVIDERS = [
-    {
-        'NAME': 'storage.data_providers.file_storage.FileSystemStorageProvider',
-        'OPTIONS': {
-            'root_directory': Path('/tmp/1/'),
-        }  # todo: remove
-    },
-]
-
-
 # Application definition
 
 AUTH_USER_MODEL = 'accounts.User'

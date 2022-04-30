@@ -32,16 +32,13 @@ class BaseProvider:
     def validate_options(cls, options: dict):
         pass
 
-    def list_files(self, path: str):
-        raise NotImplementedError
-
     def upload_file(self, path: str, uploaded_file: UploadedFile):
         raise NotImplementedError
 
     def open_file(self, path: str) -> File:
         raise NotImplementedError
 
-    def mkdir(self, path: str, name: str):
+    def mkdir(self, target_path: str):
         raise NotImplementedError
 
     def rm(self, path: str):

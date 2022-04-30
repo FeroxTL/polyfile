@@ -18,16 +18,13 @@ class TestProvider(BaseProvider):
     def get_storage(self) -> Storage:
         pass
 
-    def list_files(self, path: str):
-        pass
-
     def upload_file(self, path: str, uploaded_file: UploadedFile):
         pass
 
     def open_file(self, path: str) -> Path:
         pass
 
-    def mkdir(self, path: str, name: str):
+    def mkdir(self, target_path: str):
         pass
 
     def rm(self, path: str):

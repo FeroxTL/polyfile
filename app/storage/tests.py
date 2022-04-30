@@ -134,23 +134,23 @@ class FileSystemStorageProviderTests(TestCase):
             provider.init_library()
 
             # mkdir
-            realpath = provider.mkdir(path='/', name=dir_name)
+            realpath = provider.mkdir(target_path=f'/{dir_name}')
             self.assertEqual(realpath, Path(f) / 'data' / str(provider.library.pk) / 'files' / dir_name)
             self.assertTrue(realpath.exists())
 
             # suspicious mkdir
             with self.assertRaises(SuspiciousFileOperation):
-                provider.mkdir(path='/', name='../foobar/')
+                provider.mkdir(target_path='/../foobar/')
 
             # relative path
             dir_name2 = 'FooBar2'
-            realpath = provider.mkdir(path=dir_name, name=dir_name2)
+            realpath = provider.mkdir(target_path=f'{dir_name}/{dir_name2}')
             self.assertEqual(realpath, Path(f) / 'data' / str(provider.library.pk) / 'files' / dir_name / dir_name2)
             self.assertTrue(realpath.exists())
 
             # directory already exists
             with self.assertRaises(ProviderException) as e:
-                provider.mkdir(path=dir_name, name=dir_name2)
+                provider.mkdir(target_path=f'{dir_name}/{dir_name2}')
             self.assertEqual(str(e.exception), 'directory already exists')
 
     def test_rm(self):

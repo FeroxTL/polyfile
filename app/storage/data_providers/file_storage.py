@@ -48,21 +48,14 @@ class FileSystemStorageProvider(BaseProvider):
         return Path('data') / str(self.library.pk) / 'files'
 
     @staticmethod
-    def _path_to_rel_path(path: str):
-        if path and path[0] == '/':
-            return path[1:]
-        return path
+    def _path_to_rel_path(path: str) -> str:
+        return path.lstrip('/')
 
-    def get_user_storage(self):
+    def get_user_storage(self) -> FileSystemStorage:
         """Storage with location root in user directory."""
         return FileSystemStorage(location=self.root_directory / self._get_relative_user_data_directory())
 
-    def list_files(self, path: str):
-        # todo -- what for?
-        storage = self.get_user_storage()
-        return storage.listdir(path)
-
-    def upload_file(self, path: str, uploaded_file: UploadedFile):
+    def upload_file(self, path: str, uploaded_file: UploadedFile) -> str:
         path = self._path_to_rel_path(path)
         storage = self.get_user_storage()
         path_name = Path(path) / uploaded_file.name
@@ -81,12 +74,10 @@ class FileSystemStorageProvider(BaseProvider):
         storage = self.get_user_storage()
         return storage.open(path)
 
-    def mkdir(self, path: str, name: str):
-        # todo: remove 'name' argument
-        path = self._path_to_rel_path(path)
+    def mkdir(self, target_path: str):
+        relative_path = self._path_to_rel_path(target_path)
         storage = self.get_user_storage()
-        path_name = Path(path) / name
-        real_path = Path(storage.path(path_name))
+        real_path = Path(storage.path(relative_path))
 
         if real_path.exists():
             raise ProviderException('directory already exists')

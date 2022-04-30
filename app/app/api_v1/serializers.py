@@ -1,4 +1,5 @@
 import mimetypes
+import os
 from operator import itemgetter
 
 from django.core.exceptions import SuspiciousFileOperation
@@ -246,13 +247,11 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         except Node.DoesNotExist as e:
             raise exceptions.ParseError(str(e))
 
-        node = parent_node.add_child(
-            name=name,
-            file_type=Node.FileTypeChoices.DIRECTORY,
-        )
+        node = parent_node.add_child(name=name, file_type=Node.FileTypeChoices.DIRECTORY)
+        target_path = os.path.join(path, name)
 
         try:
-            data_provider.mkdir(path=path, name=name)
+            data_provider.mkdir(target_path=target_path)
         except SuspiciousFileOperation:
             # todo: logging.exception(e)
             raise exceptions.ParseError('Something went wrong')
