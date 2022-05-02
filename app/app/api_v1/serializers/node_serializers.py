@@ -10,30 +10,9 @@ from rest_framework import serializers, exceptions
 from app.utils.models import get_field
 from storage.data_providers.exceptions import ProviderException
 from storage.data_providers.utils import get_data_provider
-from storage.models import DataLibrary, Node, Mimetype
+
+from storage.models import Node, Mimetype
 from storage.utils import get_node_by_path
-
-
-class DataLibrarySerializer(serializers.ModelSerializer):
-    """DataLibrary serializer for creates/listings."""
-    class Meta:
-        model = DataLibrary
-        fields = [
-            'id',
-            'name',
-            'data_source',
-        ]
-        read_only_fields = [
-            'id',
-        ]
-
-
-class DataLibraryUpdateSerializer(DataLibrarySerializer):
-    """DataLibrary serializer for updates."""
-    class Meta(DataLibrarySerializer.Meta):
-        read_only_fields = DataLibrarySerializer.Meta.read_only_fields + [
-            'data_source',
-        ]
 
 
 class NodeSerializer(serializers.ModelSerializer):

@@ -15,10 +15,10 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from app.api_v1.serializers import data_library_serializers, node_serializers
 from storage.data_providers.utils import get_data_provider
 from storage.models import DataLibrary, Node
 from storage.utils import remove_node, get_node_by_path
-from . import serializers as v1_serializers
 
 
 class ApiItemList(APIView):
@@ -34,7 +34,7 @@ class ApiItemList(APIView):
 
 class DataLibraryListCreateView(generics.ListCreateAPIView):
     """List of user's libraries."""
-    serializer_class = v1_serializers.DataLibrarySerializer
+    serializer_class = data_library_serializers.DataLibrarySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
@@ -58,8 +58,8 @@ class DataLibraryDetailUpdateView(generics.RetrieveUpdateAPIView):
 
     def get_serializer_class(self):
         if self.request.method.upper() in ['PUT', 'PATCH']:
-            return v1_serializers.DataLibraryUpdateSerializer
-        return v1_serializers.DataLibrarySerializer
+            return data_library_serializers.DataLibraryUpdateSerializer
+        return data_library_serializers.DataLibrarySerializer
 
     def get_queryset(self):
         return DataLibrary.objects.filter(owner=self.request.user)
@@ -70,7 +70,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
     # todo: serializer_class for openApi
-    serializer_class = v1_serializers.DataLibrarySerializer
+    serializer_class = data_library_serializers.DataLibrarySerializer
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -105,16 +105,16 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         child_nodes = self.get_child_nodes(current_node)
 
         return Response({
-            'library': v1_serializers.DataLibrarySerializer(self.library).data,
-            'current_node': v1_serializers.NodeSerializer(current_node).data,
-            'nodes': v1_serializers.NodeSerializer(child_nodes, many=True).data,
+            'library': data_library_serializers.DataLibrarySerializer(self.library).data,
+            'current_node': node_serializers.NodeSerializer(current_node).data,
+            'nodes': node_serializers.NodeSerializer(child_nodes, many=True).data,
         })
 
 
 class DataLibraryNodeMoveView(generics.UpdateAPIView):
     """Move Node."""
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = v1_serializers.NodeMoveSerializer
+    serializer_class = node_serializers.NodeMoveSerializer
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -146,7 +146,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
 class DataLibraryNodeRenameView(generics.UpdateAPIView):
     """Rename Node."""
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = v1_serializers.NodeRenameSerializer
+    serializer_class = node_serializers.NodeRenameSerializer
     queryset = Node.objects.none()
 
     def __init__(self, *args, **kwargs):
@@ -178,7 +178,7 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
 
 class NodeUploadFileView(generics.CreateAPIView):
     """Upload file to library."""
-    serializer_class = v1_serializers.NodeCreateSerializer
+    serializer_class = node_serializers.NodeCreateSerializer
     lookup_url_kwarg = 'lib_id'
 
     def get_queryset(self):
@@ -203,7 +203,7 @@ class NodeUploadFileView(generics.CreateAPIView):
 
 class DataLibraryMkdirView(generics.CreateAPIView):
     """Create directory in library."""
-    serializer_class = v1_serializers.MkDirectorySerializer
+    serializer_class = node_serializers.MkDirectorySerializer
     lookup_url_kwarg = 'lib_id'
 
     def get_library(self, lib_id: UUID) -> DataLibrary:
@@ -216,7 +216,7 @@ class DataLibraryMkdirView(generics.CreateAPIView):
 
 class DataLibraryRmFileView(generics.DestroyAPIView):
     """Remove file or directory (must be empty)."""
-    serializer_class = v1_serializers.NodeCreateSerializer
+    serializer_class = node_serializers.NodeCreateSerializer
     lookup_url_kwarg = 'lib_id'
     queryset = Node.objects.none()
 
