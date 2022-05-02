@@ -58,7 +58,7 @@ class DataLibraryDetailUpdateView(generics.RetrieveUpdateAPIView):
 
     def get_serializer_class(self):
         if self.request.method.upper() in ['PUT', 'PATCH']:
-            return v1_serializers.DataLibraryInstanceSerializer
+            return v1_serializers.DataLibraryUpdateSerializer
         return v1_serializers.DataLibrarySerializer
 
     def get_queryset(self):
@@ -107,7 +107,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         return Response({
             'library': v1_serializers.DataLibrarySerializer(self.library).data,
             'current_node': v1_serializers.NodeSerializer(current_node).data,
-            'nodes': v1_serializers.ChildNodeSerializer(child_nodes, many=True).data,
+            'nodes': v1_serializers.NodeSerializer(child_nodes, many=True).data,
         })
 
 
@@ -178,7 +178,7 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
 
 class NodeUploadFileView(generics.CreateAPIView):
     """Upload file to library."""
-    serializer_class = v1_serializers.NodeSerializer
+    serializer_class = v1_serializers.NodeCreateSerializer
     lookup_url_kwarg = 'lib_id'
 
     def get_queryset(self):
@@ -203,7 +203,7 @@ class NodeUploadFileView(generics.CreateAPIView):
 
 class DataLibraryMkdirView(generics.CreateAPIView):
     """Create directory in library."""
-    serializer_class = v1_serializers.RepoDirectorySerializer
+    serializer_class = v1_serializers.MkDirectorySerializer
     lookup_url_kwarg = 'lib_id'
 
     def get_library(self, lib_id: UUID) -> DataLibrary:
@@ -216,7 +216,7 @@ class DataLibraryMkdirView(generics.CreateAPIView):
 
 class DataLibraryRmFileView(generics.DestroyAPIView):
     """Remove file or directory (must be empty)."""
-    serializer_class = v1_serializers.NodeSerializer
+    serializer_class = v1_serializers.NodeCreateSerializer
     lookup_url_kwarg = 'lib_id'
     queryset = Node.objects.none()
 

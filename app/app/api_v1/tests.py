@@ -11,7 +11,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.factories import UserFactory
-from app.utils.tests import drf_dt
 from storage.data_providers.exceptions import ProviderException
 from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory
 from storage.models import DataLibrary, Node
@@ -198,11 +197,11 @@ class NodeTests(APITestCase):
         data_library.root_dir.refresh_from_db()
         self.assertEqual(data_library.root_dir.get_children().count(), 1)
         directory = data_library.root_dir.get_children().get()
+        self.assertTrue(directory.pk)
         self.assertDictEqual(response.json(), {
             'file_type': Node.FileTypeChoices.DIRECTORY.value,
             'size': 0,
-            'created_at': drf_dt(directory.created_at),
-            'updated_at': drf_dt(directory.updated_at),
+            'mimetype': None,
             'name': data['name'],
             'has_preview': False,
         })
@@ -297,6 +296,16 @@ class NodeTests(APITestCase):
             response = self.client.post(url, {'file': tmp_file}, format='multipart')
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
             self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
+
+        # target path is not directory
+        target_node = FileFactory(parent=data_library.root_dir)
+        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': f'/{target_node.name}'})
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
+            image.save(tmp_file)
+            tmp_file.seek(0)
+            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+            self.assertDictEqual(response.json(), {'detail': 'Incorrect node type'})
 
 
 class ProviderTests(APITestCase):

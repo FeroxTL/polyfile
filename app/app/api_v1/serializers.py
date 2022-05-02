@@ -28,7 +28,7 @@ class DataLibrarySerializer(serializers.ModelSerializer):
         ]
 
 
-class DataLibraryInstanceSerializer(DataLibrarySerializer):
+class DataLibraryUpdateSerializer(DataLibrarySerializer):
     """DataLibrary serializer for updates."""
     class Meta(DataLibrarySerializer.Meta):
         read_only_fields = DataLibrarySerializer.Meta.read_only_fields + [
@@ -37,14 +37,12 @@ class DataLibraryInstanceSerializer(DataLibrarySerializer):
 
 
 class NodeSerializer(serializers.ModelSerializer):
-    file = serializers.FileField(write_only=True)
     mimetype = serializers.ReadOnlyField(source='mimetype.name', default=None)
     has_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = Node
         fields = [
-            'file',
             'name',
             'file_type',
             'mimetype',
@@ -61,6 +59,15 @@ class NodeSerializer(serializers.ModelSerializer):
     def get_has_preview(instance: Node):
         return False
 
+
+class NodeCreateSerializer(NodeSerializer):
+    file = serializers.FileField(write_only=True)
+
+    class Meta(NodeSerializer.Meta):
+        fields = [
+            'file',
+        ] + NodeSerializer.Meta.fields
+
     @transaction.atomic
     def create(self, validated_data: dict):
         file: UploadedFile = validated_data['file']
@@ -68,7 +75,11 @@ class NodeSerializer(serializers.ModelSerializer):
         data_provider = get_data_provider(library=library)
 
         try:
-            parent_node = get_node_by_path(root_node=library.root_dir, path=path)
+            parent_node = get_node_by_path(
+                root_node=library.root_dir,
+                path=path,
+                last_node_type=Node.FileTypeChoices.DIRECTORY
+            )
         except Node.DoesNotExist as e:
             # todo one style for all errors
             raise exceptions.ValidationError({'detail': str(e)})
@@ -88,25 +99,6 @@ class NodeSerializer(serializers.ModelSerializer):
             raise exceptions.ValidationError(e)
 
         return node
-
-
-class ChildNodeSerializer(serializers.ModelSerializer):
-    mimetype = serializers.ReadOnlyField(source='mimetype.name', default=None)
-    has_preview = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Node
-        fields = [
-            'name',
-            'file_type',
-            'mimetype',
-            'size',
-            'has_preview',
-        ]
-
-    @staticmethod
-    def get_has_preview(instance: Node):
-        return False
 
 
 class NodeMoveSerializer(serializers.ModelSerializer):
@@ -202,7 +194,8 @@ class NodeRenameSerializer(serializers.ModelSerializer):
         return self.instance
 
 
-class RepoDirectorySerializer(serializers.ModelSerializer):
+class MkDirectorySerializer(NodeSerializer):
+    """Create directory node in library."""
     name = serializers.CharField(
         allow_null=False,
         allow_blank=False,
@@ -210,35 +203,12 @@ class RepoDirectorySerializer(serializers.ModelSerializer):
         label=get_field(Node, 'name').verbose_name,
         # todo: should add regexp to check name?
     )
-    has_preview = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Node
-        fields = [
-            'name',
-            'file_type',
-            'created_at',
-            'updated_at',
-            'size',
-            'has_preview',
-        ]
-        read_only_fields = [
-            'file_type',
-            'name',
-            'created_at',
-            'updated_at',
-            'size',
-        ]
 
     @staticmethod
     def validate_name(name: str):
         if name in ['.', '..']:
             raise exceptions.ValidationError('This name is invalid')
         return name
-
-    @staticmethod
-    def get_has_preview(instance: Node):
-        return False
 
     @transaction.atomic
     def create(self, validated_data):
