@@ -2,20 +2,21 @@ import io
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.files.uploadedfile import UploadedFile
+from django.forms import forms, fields
 from minio import Minio, S3Error
 from urllib3.exceptions import RequestError
 
+from app.utils.models import get_field
 from storage.data_providers.base import BaseProvider
-from storage.data_providers.exceptions import ProviderException, ProviderOptionError
-from storage.models import DataLibrary
+from storage.data_providers.exceptions import ProviderException
+from storage.models import DataLibrary, DataSourceOption
 
 
 class MinioStorage:
     def __init__(self, client_options: dict):
-        # todo
-        client_options.setdefault('secure', False)
         self.client = Minio(**client_options)
 
     def bucket_exists(self, bucket_name) -> bool:
@@ -60,25 +61,41 @@ class MinioStorage:
                 self.client.fput_object(bucket_name=bucket_name, object_name=item_target, file_path=f.name)
 
 
+class MinioValidationForm(forms.Form):
+    endpoint = fields.CharField(
+        required=True,
+        max_length=get_field(DataSourceOption, 'value').max_length
+    )
+    access_key = fields.CharField(
+        required=True,
+        max_length=get_field(DataSourceOption, 'value').max_length
+    )
+    secret_key = fields.CharField(
+        required=True,
+        max_length=get_field(DataSourceOption, 'value').max_length
+    )
+    secure = fields.BooleanField(
+        required=False,
+    )
+
+
 class MinioStorageProvider(BaseProvider):
     provider_id = 'MinioStorage'
     verbose_name = 'Minio Storage'
+    validation_class = MinioValidationForm
 
     def __init__(self, library: DataLibrary, options: dict):
         super().__init__(library=library, options=options)
-        self.storage = MinioStorage(client_options=options)
+        self.storage = MinioStorage(client_options=self.transform_options(options))
 
     @classmethod
     def validate_options(cls, options: dict):
-        endpoint = options.get('endpoint', None)
-        if endpoint is None:
-            raise ProviderOptionError({'endpoint': 'This option is required'})
-
+        options = super().validate_options(options=options)
         storage = MinioStorage(client_options=options)
         try:
             storage.client.list_buckets()
         except (S3Error, RequestError) as e:
-            raise ProviderOptionError({'endpoint': str(e)})
+            raise ValidationError({'endpoint': str(e)})
 
     def init_library(self):
         bucket_name = self.get_user_bucket()
@@ -89,9 +106,7 @@ class MinioStorageProvider(BaseProvider):
         return str(self.library.pk)
 
     def upload_file(self, path: str, uploaded_file: UploadedFile):
-        if path and path[0] == '/':
-            path = path[1:]
-
+        path = path.lstrip('/')
         self.storage.upload(bucket_name=self.get_user_bucket(), path=path, file=uploaded_file)
 
     def open_file(self, path: str) -> File:

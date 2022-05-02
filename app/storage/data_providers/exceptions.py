@@ -1,9 +1,5 @@
-from django.core.exceptions import SuspiciousFileOperation, ValidationError
+from django.core.exceptions import SuspiciousFileOperation
 
 
 class ProviderException(SuspiciousFileOperation):
-    pass
-
-
-class ProviderOptionError(ValidationError):
     pass

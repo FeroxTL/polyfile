@@ -1,11 +1,16 @@
 import typing
 
+from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.files.uploadedfile import UploadedFile
+from django.forms import forms
+
 from storage.models import DataLibrary
 
 
 class BaseProvider:
+    validation_class: forms.Form = forms.Form
+
     @property
     def provider_id(self) -> str:
         raise NotImplementedError
@@ -29,8 +34,16 @@ class BaseProvider:
         pass
 
     @classmethod
+    def transform_options(cls, options: dict):
+        """Transform options from k:v of strings to required types."""
+        form = cls.validation_class(data=options)
+        if not form.is_valid():
+            raise ValidationError(form.errors)
+        return form.cleaned_data
+
+    @classmethod
     def validate_options(cls, options: dict):
-        pass
+        return cls.transform_options(options)
 
     def upload_file(self, path: str, uploaded_file: UploadedFile):
         raise NotImplementedError

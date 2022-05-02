@@ -1,31 +1,40 @@
 from pathlib import Path
 
+from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import UploadedFile
+from django.forms import forms, fields
 
+from app.utils.models import get_field
 from storage.data_providers.base import BaseProvider
-from storage.data_providers.exceptions import ProviderException, ProviderOptionError
-from storage.models import DataLibrary
+from storage.data_providers.exceptions import ProviderException
+from storage.models import DataLibrary, DataSourceOption
+
+
+class FileStorageForm(forms.Form):
+    root_directory = fields.CharField(
+        required=True,
+        max_length=get_field(DataSourceOption, 'value').max_length,
+    )
+
+    def clean(self):
+        root_directory = self.cleaned_data.get('root_directory', None)
+        if root_directory is not None:
+            root_directory = Path(root_directory)
+            if not root_directory.exists() or not root_directory.is_dir():
+                raise ValidationError({'root_directory': f'"{root_directory}" is not directory or does not exist'})
+        return self.cleaned_data
 
 
 class FileSystemStorageProvider(BaseProvider):
     provider_id = 'FileStorage'
     verbose_name = 'Disk File Storage'
+    validation_class = FileStorageForm
 
     def __init__(self, library: DataLibrary, options: dict):
         self.root_directory = Path(options['root_directory'])
         super().__init__(library=library, options=options)
-
-    @classmethod
-    def validate_options(cls, options: dict):
-        root_directory = options.get('root_directory', None)
-        if root_directory is None:
-            raise ProviderOptionError({'root_directory': 'This option is required'})
-
-        root_directory = Path(root_directory)
-        if not root_directory.exists() or not root_directory.is_dir():
-            raise ProviderOptionError({'root_directory': f'"{root_directory}" is not directory or does not exist'})
 
     @property
     def data_directory(self) -> Path:

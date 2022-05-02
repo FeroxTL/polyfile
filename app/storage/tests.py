@@ -3,14 +3,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
-from django.core.exceptions import SuspiciousFileOperation
+from django.core.exceptions import SuspiciousFileOperation, ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
 from accounts.factories import UserFactory
 from app.utils.tests import TestProvider
-from storage.data_providers.exceptions import ProviderException, ProviderOptionError
+from storage.data_providers.exceptions import ProviderException
 from storage.data_providers.file_storage import FileSystemStorageProvider
 from storage.data_providers.utils import get_data_provider
 from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory
@@ -92,7 +92,7 @@ class FileSystemStorageProviderTests(TestCase):
             provider.validate_options(data_source.options_dict)
 
             # directory does not exist
-            with self.assertRaises(ProviderOptionError) as e:
+            with self.assertRaises(ValidationError) as e:
                 provider.validate_options({'root_directory': not_existent_path})
 
             self.assertDictEqual(e.exception.message_dict, {
@@ -100,11 +100,11 @@ class FileSystemStorageProviderTests(TestCase):
             })
 
             # directory is not provided
-            with self.assertRaises(ProviderOptionError) as e:
+            with self.assertRaises(ValidationError) as e:
                 provider.validate_options({})
 
             self.assertDictEqual(e.exception.message_dict, {
-                'root_directory': ['This option is required']
+                'root_directory': ['This field is required.']
             })
 
     def test_file_upload(self):
@@ -343,7 +343,7 @@ class DataSourceAdminTest(TestCase):
             **self.get_options({'foo': 'bar'}),
         }
         with mock.patch.object(TestProvider, 'validate_options') as p:
-            p.side_effect = ProviderOptionError({'foo': 'foo is invalid'})
+            p.side_effect = ValidationError({'foo': 'foo is invalid'})
             response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
 

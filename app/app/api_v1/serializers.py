@@ -140,8 +140,11 @@ class NodeMoveSerializer(serializers.ModelSerializer):
 
         try:
             source_node = get_node_by_path(root_node=library.root_dir, path=source_path)
-            target_directory = get_node_by_path(root_node=library.root_dir, path=target_path)
-            assert target_directory.is_directory  # todo
+            target_directory = get_node_by_path(
+                root_node=library.root_dir,
+                path=target_path,
+                last_node_type=Node.FileTypeChoices.DIRECTORY
+            )
         except Node.DoesNotExist as e:
             raise exceptions.ValidationError({'path': str(e)})
 
