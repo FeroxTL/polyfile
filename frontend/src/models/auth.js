@@ -2,7 +2,24 @@ import m from 'mithril';
 import {getCookie} from "../utils/cookie";
 
 
+function CurrentUser(data) {
+  this.fullName= data["full_name"] || "";
+}
+
+
 let Auth = {
+  currentUser: null,
+
+  getCurrentUser: function() {
+    return m.request({
+      method: "GET",
+      url: "/api/v1/sys/current_user",
+    }).then((data) => {
+      this.currentUser = new CurrentUser(data);
+      return data;
+    })
+  },
+
   logout: function() {
     return m.request({
       method: "POST",
@@ -15,6 +32,4 @@ let Auth = {
 };
 
 
-export {
-  Auth
-};
+export default Auth;

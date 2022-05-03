@@ -3,13 +3,13 @@ from django.urls import path, include
 from app.api_v1.data_libraries import views as dl_views
 from app.api_v1.data_sources import views as ds_views
 from app.api_v1.data_providers import views as dp_views
+from app.api_v1.system import views as sys_views
 from app.api_auth import urls as api_urls
 
-from . import views
-
 urlpatterns = [
-    path('', views.ApiIndex.as_view(), name='index'),
+    path('', sys_views.ApiIndex.as_view(), name='index'),
     path('auth/', include(api_urls)),
+    path('sys/current_user', sys_views.CurrentUserView.as_view(), name='sys-cuser'),
     path('dp', dp_views.DataProviderList.as_view(), name='dp-list'),
     path('ds', ds_views.DataSourceListCreateView.as_view(), name='ds-list'),
     path('ds/<int:pk>', ds_views.DataSourceListUpdateView.as_view(), name='ds-detail'),

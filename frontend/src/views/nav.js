@@ -1,6 +1,6 @@
 import m from "mithril";
 import {NavDropDown, NavDropDownItem} from "../components/bootstrap/dropdown";
-import {Auth} from "../models/auth";
+import Auth from "../models/auth";
 import routes from "../utils/routes";
 import {modal} from "../components/bootstrap/modal";
 
@@ -57,9 +57,9 @@ let SideNavAccordion = {
             ]),
           ])
         ]),
-        m("div.sb-sidenav-footer", [
+        m("div.sb-sidenav-footer", Auth.currentUser && [
           m("div.small", "Logged in as:"),
-          "Start Bootstrap"
+          Auth.currentUser.fullName
         ])
       ])
     );

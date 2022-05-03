@@ -1,3 +1,4 @@
+# todo: make errors in one style maybe {"message": "error message"}
 import typing
 from uuid import UUID
 

@@ -4,6 +4,7 @@ import {NodeListWrapperView} from "./views/node_list/index";
 import routes from "./utils/routes";
 import {parsePath} from "./utils/path";
 import LibraryListWrapperView from "./views/library_list/index";
+import Auth from "./models/auth";
 
 
 let NodeListRouter = {
@@ -19,6 +20,9 @@ m.route(document.body, routes.library_index, {
   [routes.library_index]: LibraryListWrapperView,
   [routes.library_nodes_path]: NodeListRouter,
 });
+
+
+Auth.getCurrentUser();
 
 
 //debug
