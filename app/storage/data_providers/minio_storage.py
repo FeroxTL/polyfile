@@ -63,18 +63,22 @@ class MinioStorage:
 
 class MinioValidationForm(forms.Form):
     endpoint = fields.CharField(
+        label='Endpoint',
         required=True,
         max_length=get_field(DataSourceOption, 'value').max_length
     )
     access_key = fields.CharField(
+        label='Access key',
         required=True,
         max_length=get_field(DataSourceOption, 'value').max_length
     )
     secret_key = fields.CharField(
+        label='Secret key',
         required=True,
         max_length=get_field(DataSourceOption, 'value').max_length
     )
     secure = fields.BooleanField(
+        label='Secure',
         required=False,
     )
 

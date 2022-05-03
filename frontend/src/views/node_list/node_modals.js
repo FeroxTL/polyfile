@@ -16,7 +16,7 @@ function showCreateDirectoryModal(lib_id, path) {
       return (
         m.request({
           method: "POST",
-          url: "/api/v1/libraries/:lib_id/mkdir:path",
+          url: "/api/v1/lib/:lib_id/mkdir:path",
           params: {lib_id: lib_id, path: path},
           body: this.instance,
           headers: {
@@ -72,7 +72,7 @@ function showRemoveNodeModal(node) {
       return (
         m.request({
           method: "DELETE",
-          url: "/api/v1/libraries/:lib_id/rm:path",
+          url: "/api/v1/lib/:lib_id/rm:path",
           params: {lib_id: node.library.id, path: node.fullPath},
           headers: {
             'X-CSRFToken': getCookie('csrftoken'),
@@ -118,7 +118,7 @@ function showNodeMenu(node) {
       return (
         m.request({
           method: "PUT",
-          url: "/api/v1/libraries/:lib_id/rename:path...",
+          url: "/api/v1/lib/:lib_id/rename:path...",
           params: {lib_id: node.library.id, path: node.fullPath},
           body: this.node,
           headers: {

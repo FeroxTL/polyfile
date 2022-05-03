@@ -20,3 +20,8 @@ class UserFactory(DjangoModelFactory):
             instance.set_password(password)
             instance.save(update_fields=['password'])
         return instance
+
+
+class SuperuserFactory(UserFactory):
+    is_superuser = True
+    is_staff = True

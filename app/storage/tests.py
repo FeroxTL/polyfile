@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.factories import UserFactory
+from accounts.factories import SuperuserFactory
 from app.utils.tests import TestProvider
 from storage.data_providers.exceptions import ProviderException
 from storage.data_providers.file_storage import FileSystemStorageProvider
@@ -250,7 +250,7 @@ class FileSystemStorageProviderTests(TestCase):
 
 class DataSourceAdminTest(TestCase):
     def setUp(self) -> None:
-        self.user = UserFactory(is_superuser=True, is_staff=True)
+        self.user = SuperuserFactory()
         self.client.force_login(self.user)
 
     @staticmethod
@@ -357,7 +357,7 @@ class DataSourceAdminTest(TestCase):
 
 class DataLibraryAdminTest(TestCase):
     def setUp(self) -> None:
-        self.user = UserFactory(is_superuser=True, is_staff=True)
+        self.user = SuperuserFactory()
         self.client.force_login(self.user)
 
     def test_init_library(self):

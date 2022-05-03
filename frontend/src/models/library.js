@@ -17,7 +17,7 @@ let LibraryData = function () {
     this.status = "loading";
     m.request({
       method: "GET",
-      url: "/api/v1/libraries",
+      url: "/api/v1/lib",
     }).then((result) => {
       this.status = "done";
       this.list = result.map((data) => (new Library(data)));

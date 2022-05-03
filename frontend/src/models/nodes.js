@@ -19,7 +19,7 @@ function Node(data) {
     get: () => (this.path + this.name + (this.fileType === "directory" ? "/" : ""))
   });
   Object.defineProperty(this, 'downloadUrl', {
-    get: () => ("/api/v1/libraries/" + this.library.id + "/download" + this.fullPath)
+    get: () => ("/api/v1/lib/" + this.library.id + "/download" + this.fullPath)
   });
 }
 
@@ -38,7 +38,7 @@ let NodesData = function () {
 
     m.request({
       method: "GET",
-      url: "/api/v1/libraries/:lib_id/files:path",
+      url: "/api/v1/lib/:lib_id/files:path",
       params: {lib_id: lib_id, path: path},
     }).then((result) => {
       this.status = "done";

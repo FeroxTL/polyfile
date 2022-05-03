@@ -16,6 +16,7 @@ class FileStorageForm(forms.Form):
     root_directory = fields.CharField(
         required=True,
         max_length=get_field(DataSourceOption, 'value').max_length,
+        label='Root directory',
     )
 
     def clean(self):

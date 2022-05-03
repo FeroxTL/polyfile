@@ -18,7 +18,7 @@ let TopNavBarNodeMenu = {
 
     m.request({
       method: "POST",
-      url: "/api/v1/libraries/:lib_id/upload:path...",
+      url: "/api/v1/lib/:lib_id/upload:path...",
       params: {
         lib_id: m.route.param("lib_id"),
         path: path,

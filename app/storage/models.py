@@ -30,6 +30,7 @@ class DataSource(models.Model):
         verbose_name_plural = 'Data sources'
 
     objects = models.Manager()
+    options: models.QuerySet
 
     def __str__(self):
         return self.name or '<empty name>'

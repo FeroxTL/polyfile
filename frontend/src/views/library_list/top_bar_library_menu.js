@@ -12,7 +12,7 @@ function showCreateLibraryModal() {
       return (
         m.request({
           method: "POST",
-          url: "/api/v1/libraries",
+          url: "/api/v1/lib",
           body: this.library,
           headers: {
             'X-CSRFToken': getCookie('csrftoken'),

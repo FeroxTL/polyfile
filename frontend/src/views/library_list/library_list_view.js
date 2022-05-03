@@ -42,7 +42,7 @@ function showLibraryMenu(library) {
       return (
         m.request({
           method: "PUT",
-          url: "/api/v1/libraries/:lib_id",
+          url: "/api/v1/lib/:lib_id",
           params: {lib_id: library.id},
           body: this.library,
           headers: {
