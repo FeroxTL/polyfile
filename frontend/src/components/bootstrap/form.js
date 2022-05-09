@@ -29,6 +29,7 @@ const FieldAttrs = function(attrs) {
   this.readOnly = attrs["read_only"] || false;
   this.label = attrs["label"] || "";
   this.helpText = attrs["help_text"] || null;
+  this.choices = attrs["choices"] || [];
 };
 
 
@@ -116,14 +117,42 @@ const FormCheckbox = Object.assign(Object.create(FormInput), {
 });
 
 
+const FormSelect = Object.assign(Object.create(FormInput), {
+  onChange: function(choices, e) {
+    this.setValue(choices[e.target.selectedIndex]["value"]);
+  },
+
+  view: function(vnode) {
+    const {fieldAttrs} = vnode.attrs;
+
+    return (
+      m("div.mb-3", [
+        fieldAttrs.label && m("label.form-label", {for: this.id}, [
+          fieldAttrs.label,
+          fieldAttrs.required && [" ", m("span.text-danger", "*")],
+        ]),
+        m("select.form-select", {
+            value: this.getValue(),
+            onchange: this.onChange.bind(this, fieldAttrs.choices),
+          }, fieldAttrs.choices.map((item) => (m("option", {value: item["value"]}, item["display_name"]))
+        )),
+        fieldAttrs.helpText && m("div.form-text", fieldAttrs.helpText)
+      ])
+    )
+  }
+});
+
 const FormAutoField = {
   view: function(vnode) {
     const {fieldAttrs} = vnode.attrs;
 
-    if (fieldAttrs.readOnly) return null;
+    if (fieldAttrs.readOnly || ["nested object"].indexOf(fieldAttrs.type) !== -1) return null;
     if (fieldAttrs.type === "checkbox") return m(FormCheckbox, vnode.attrs);
     if (["string", "text"].indexOf(fieldAttrs.type) !== -1) return m(FormInput, vnode.attrs);
     if (fieldAttrs.type === "integer") return m(FormInput, vnode.attrs);
+    if (fieldAttrs.type === "choice") return m(FormSelect, vnode.attrs);
+
+    console && console.log(`Unknown field type "${fieldAttrs.type}"`);
   }
 };
 

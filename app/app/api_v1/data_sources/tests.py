@@ -51,7 +51,7 @@ class DataSourceTests(APITestCase):
         # list
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()), 0)
+        self.assertEqual(DataSource.objects.count(), 0)
 
         # create
         response = self.client.post(url, data, format='json')

@@ -52,7 +52,11 @@ const SettingsWrapperView = {
     }
 
     return [
-      m(SideNavView, {sideMenuItems: this.getMenuItems(), sideNavThemeClass: "sb-sidenav-light"},
+      m(SideNavView, {
+          sideMenuItems: this.getMenuItems(),
+          sideNavThemeClass: "sb-sidenav-light",
+          topNavBarComponent: childView.TopNavView
+        },
         m(childView, vnode.attrs),
       ),
       modal.renderModal(),

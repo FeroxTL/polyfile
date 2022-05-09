@@ -1,94 +1,19 @@
 from django.db import transaction, models
-from rest_framework import serializers, exceptions
-from rest_framework.settings import api_settings
-from rest_framework.utils import html
+from rest_framework import serializers
 
 from app.utils.models import get_field
 from storage.data_providers.base import provider_registry
 from storage.models import DataSource, DataSourceOption
 
 
-class DataSourceOptionSerializer(serializers.ModelSerializer):
-    """Data source option serializer."""
-    class Meta:
-        model = DataSourceOption
-        fields = [
-            'key',
-            'value',
-        ]
-
-
-class DataSourceOptionsListSerializer(serializers.ListSerializer):
-    """Data source options update."""
-    child = DataSourceOptionSerializer()
-
-    def validate(self, attrs):
-        if self.parent.instance is not None:
-            data_provider_id = self.parent.instance.data_provider_id
-        else:
-            data_provider_id = self.parent.initial_data.get('data_provider_id')
-
-        if data_provider_id and provider_registry.has_provider(data_provider_id):
-            options = {option['key']: option['value'] for option in attrs}
-            provider_cls = provider_registry.get_provider(data_provider_id)
-            provider_cls.validate_options(options=options)
-        return attrs
-
-    def update(self, instance: DataSource, validated_data: list):
-        with transaction.atomic():
-            data_sources = [
-                DataSourceOption(key=option['key'], value=option['value'], data_source=instance)
-                for option in validated_data
-            ]
-            instance.options.all().delete()
-            DataSourceOption.objects.bulk_create(data_sources)
-
-    def create(self, validated_data):
-        data_sources = [
-            DataSourceOption(key=option['key'], value=option['value'], data_source=self.parent.instance)
-            for option in validated_data
-        ]
-        DataSourceOption.objects.bulk_create(data_sources)
-
-    def to_representation(self, data):
-        """List if object instances -> Dict of primitive datatypes (key:value)."""
-        iterable = data.all() if isinstance(data, models.Manager) else data
+class DatasourceDictField(serializers.DictField):
+    def to_representation(self, value):
+        iterable = value.all() if isinstance(value, models.Manager) else value
 
         return {
             item.key: item.value
             for item in iterable
         }
-
-    def to_internal_value(self, data):
-        """Dict of native values <- Dict of primitive datatypes."""
-        if html.is_html_input(data):
-            data = html.parse_html_list(data, default=[])
-
-        if not isinstance(data, dict):
-            # todo: not_a_dict
-            message = self.error_messages['not_a_list'].format(
-                input_type=type(data).__name__
-            )
-            raise exceptions.ValidationError({
-                api_settings.NON_FIELD_ERRORS_KEY: [message]
-            }, code='not_a_list')
-
-        ret = []
-        errors = []
-
-        for key, item in data.items():
-            try:
-                validated = self.child.run_validation({'key': key, 'value': item})
-            except exceptions.ValidationError as exc:
-                errors.append(exc.detail)
-            else:
-                ret.append(validated)
-                errors.append({})
-
-        if any(errors):
-            raise exceptions.ValidationError(errors)
-
-        return ret
 
 
 class DataSourceSerializer(serializers.ModelSerializer):
@@ -97,7 +22,8 @@ class DataSourceSerializer(serializers.ModelSerializer):
         label=get_field(DataSource, 'data_provider_id').verbose_name,
         choices=[],  # filled in __init__
     )
-    options = DataSourceOptionsListSerializer()
+    # todo: nobody cares about key:value length (it is limited by DataSourceOption.key and .value)
+    options = DatasourceDictField(required=True)
 
     class Meta:
         model = DataSource
@@ -118,11 +44,24 @@ class DataSourceSerializer(serializers.ModelSerializer):
             for p in provider_registry.providers
         ]
 
+    def validate_options(self, attrs):
+        data_provider_id = self.initial_data.get('data_provider_id')
+
+        if data_provider_id and provider_registry.has_provider(data_provider_id):
+            provider_cls = provider_registry.get_provider(data_provider_id)
+            provider_cls.validate_options(options=attrs)
+        return attrs
+
     def create(self, validated_data):
         options = validated_data.pop('options', None)
         with transaction.atomic():
             self.instance = DataSource.objects.create(**validated_data)
-            self.fields['options'].create(validated_data=options)
+
+            data_sources = [
+                DataSourceOption(key=key, value=value, data_source=self.instance)
+                for key, value in options.items()
+            ]
+            DataSourceOption.objects.bulk_create(data_sources)
         return self.instance
 
 
@@ -132,11 +71,24 @@ class DataSourceUpdateSerializer(DataSourceSerializer):
         label=get_field(DataSource, 'data_provider_id').verbose_name,
     )
 
+    def validate_options(self, attrs):
+        data_provider_id = self.instance.data_provider_id
+        provider_cls = provider_registry.get_provider(data_provider_id)
+        provider_cls.validate_options(options=attrs)
+        return attrs
+
     def update(self, instance: DataSource, validated_data):
         options = validated_data.pop('options', None)
-        if options is not None:
-            self.fields['options'].update(instance, options)
 
-        super().update(instance, validated_data=validated_data)
+        with transaction.atomic():
+            if options is not None:
+                data_sources = [
+                    DataSourceOption(key=key, value=value, data_source=instance)
+                    for key, value in options.items()
+                ]
+                instance.options.all().delete()
+                DataSourceOption.objects.bulk_create(data_sources)
+
+            super().update(instance, validated_data=validated_data)
 
         return instance

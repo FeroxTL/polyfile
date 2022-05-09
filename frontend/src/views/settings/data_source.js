@@ -8,33 +8,44 @@ import {getCookie} from "../../utils/cookie";
 function DataSource(data) {
   this.id = data["id"] || null;
   this.name = data["name"] || "";
-  this.dataProviderId = data["data_provider_id"] || null;
+  this.data_provider_id = data["data_provider_id"] || null;
   this.options = data["options"] || {};
+  this.actions = data["actions"] || {};
+
+  Object.defineProperty(this, 'dataProviderId', {
+    get: () => (this.data_provider_id),
+    set: (value) => {this.data_provider_id = value}
+  });
+
+  this.toJSON = function() {
+    return {
+      id: this.id,
+      name: this.name,
+      data_provider_id: this.dataProviderId,
+      options: this.options,
+    }
+  }
 }
 
 
 const dataSourceData = {
   list: [],
-  status: null,
-  optionsData: null,
-  optionsStatus: null,
 
   getUrl: function(instance) {
-    if (instance) {
+    if (instance && instance.id) {
       return m.buildPathname("/api/v1/ds/:id", {id: instance.id})
     }
     return "/api/v1/ds";
   },
   fetch: function() {
     this.list.length = 0;
-    this.status = "loading";
     return (
       m.request({
         method: "GET",
         url: this.getUrl(null),
-      }).then((result) => {
-        this.status = "done";
-        this.list = result.map((data) => (new DataSource(data)));
+      }).then((response) => {
+        this.list = response.map((data) => (new DataSource(data)));
+        return response;
       })
     );
   },
@@ -43,7 +54,7 @@ const dataSourceData = {
       m.request({
         method: instance.id ? "PUT" : "POST",
         url: this.getUrl(instance),
-        body: instance,
+        body: instance.toJSON(),
         headers: {
           'X-CSRFToken': getCookie('csrftoken'),
         }
@@ -51,15 +62,12 @@ const dataSourceData = {
     )
   },
   fetchOptions: function(instance, method) {
-    this.optionsStatus = "loading";
     return (
       m.request({
         method: "OPTIONS",
         url: this.getUrl(instance),
       }).then((data) => {
-        this.optionsStatus = "done";
-        this.optionsData = data["actions"][method].map((data) => (new FieldAttrs(data)));
-        return data;
+        return data["actions"][method].map((data) => (new FieldAttrs(data)));
       })
     )
   }
@@ -67,49 +75,60 @@ const dataSourceData = {
 
 
 function showDataSourceMenu(dataSource) {
-  const formData = Object.assign({}, dataSource);
+  let status = null;
+  let instanceFields = [];
+  const formData = new DataSource(Object.assign({}, dataSource));
   const dataProviderParams = {
     providerFields: {},
-    status: null,
     fetch: function() {
-      this.status = "loading";
       return (
         m.request({
           method: "GET",
           url: "/api/v1/dp",
-        }).then((result) => {
-          this.status = "done";
-          for (let provider of result) {
+        }).then((response) => {
+          for (let provider of response) {
             this.providerFields[provider["id"]] = provider["fields"].map((attrs) => (new FieldAttrs(attrs)));
           }
-        }).catch((e) => {
-          this.error = e.message;
+          return response;
         })
       );
     }
   };
 
-  dataProviderParams.fetch();
-  dataSourceData.fetchOptions(dataSource, "PUT");
+  Promise.all([
+    dataProviderParams.fetch(),
+    dataSourceData.fetchOptions(dataSource, dataSource ? "PUT" : "POST"),
+  ]).then(([dpResponse, dsResponse]) => {
+    status = "done";
+    instanceFields = dsResponse;
+  });
+
 
   function formSubmit(e) {
     e.preventDefault();
-    dataSourceData.save(formData).then((result) => {
-      Object.assign(dataSource, result);
+    dataSourceData.save(formData).then((response) => {
+      if (dataSource) {
+        Object.assign(dataSource, response);
+      } else {
+        dataSourceData.list.push(new DataSource(response))
+      }
       modal.close();
     });
   }
 
   const EditNodeForm = {
     view: function() {
-      if (dataProviderParams.status !== "done" || dataSourceData.optionsStatus !== "done") return m(Loader);
+      if (status !== "done") return m(Loader);
+      let optionFields = [];
 
-      const optionFields = dataProviderParams.providerFields[formData.dataProviderId];
+      if (formData.dataProviderId) {
+        optionFields = dataProviderParams.providerFields[formData.dataProviderId];
+      }
 
       return (
         m("form", {onsubmit: formSubmit}, [
 
-          dataSourceData.optionsData.map((fieldAttrs) => (
+          instanceFields.map((fieldAttrs) => (
             m(FormAutoField, {
               instance: formData,
               fieldAttrs: fieldAttrs,
@@ -208,19 +227,38 @@ const DataProviderAccordion = {
 };
 
 
+const DataSourceTopNavBar = {
+  view: function() {
+    return (
+      m("button.btn btn-secondary btn-sm me-1 ms-1[role=button]", {onclick: () => {showDataSourceMenu(null)}}, [
+        m("i.fa-solid fa-plus"),
+        m("span.d-none d-sm-inline ps-1", "Create Data source"),
+      ])
+    )
+  }
+};
+
+
 const DataSourceSettingsView = {
   verboseName: "Data source",
   iconClass: "fa-solid fa-database",
+  TopNavView: DataSourceTopNavBar,
 
   oninit: function() {
-    return dataSourceData.fetch();
+    this.status = "loading";
+    return dataSourceData.fetch().then((data) => {
+      this.status = "done";
+      return data;
+    });
   },
 
   view: function() {
-    if (dataSourceData.status !== 'done') return m(Loader);
+    if (this.status !== 'done') return m(Loader);
     if (dataSourceData.list.length === 0) return m("div.alert.alert-secondary", "No data sources");
 
-    return m(DataProviderAccordion, {items: dataSourceData.list});
+    return [
+      m(DataProviderAccordion, {items: dataSourceData.list}),
+    ];
   }
 };
 
