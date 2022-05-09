@@ -39,7 +39,7 @@ function Modal({
                   m("h5.modal-title", title),
                   m("button.btn-close[type=button]", {onclick: this.close}),
                 ]),
-              m("div.modal-body", {class: modalBodyClass}, content && m(content)),
+              content && m("div.modal-body", {class: modalBodyClass}, m(content)),
               buttons && m("div.modal-footer", buttons.map((button) => m(button)))
             ])
           )

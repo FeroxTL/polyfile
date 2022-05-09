@@ -10,16 +10,17 @@ class DataProviderList(APIView):
 
     @staticmethod
     def get_provider_fields(provider_class):
-        fields = {}
-        for key, field in provider_class.validation_class().fields.items():
-            fields[key] = {
+        return [
+            {
+                'attribute': key,
                 'type': field.widget.input_type,
                 'required': field.required,
                 'read_only': field.disabled,
                 'label': field.label or key.capitalize(),
+                'help_text': field.help_text,
             }
-
-        return fields
+            for key, field in provider_class.validation_class().fields.items()
+        ]
 
     def get_provider_description(self, provider_class):
         return {

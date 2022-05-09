@@ -65,7 +65,8 @@ class MinioValidationForm(forms.Form):
     endpoint = fields.CharField(
         label='Endpoint',
         required=True,
-        max_length=get_field(DataSourceOption, 'value').max_length
+        max_length=get_field(DataSourceOption, 'value').max_length,
+        help_text="Address to server with port. Example: localhost:9001",
     )
     access_key = fields.CharField(
         label='Access key',
@@ -80,6 +81,7 @@ class MinioValidationForm(forms.Form):
     secure = fields.BooleanField(
         label='Secure',
         required=False,
+        help_text='If should use secure protocol (https)',
     )
 
 
@@ -96,6 +98,8 @@ class MinioStorageProvider(BaseProvider):
     def validate_options(cls, options: dict):
         options = super().validate_options(options=options)
         storage = MinioStorage(client_options=options)
+        # todo: custom http_client ?
+        storage.client._http.connection_pool_kw['retries'].total = 1
         try:
             storage.client.list_buckets()
         except (S3Error, RequestError) as e:

@@ -2,7 +2,7 @@ import m from "mithril";
 import {globalLibraryData} from "../../models/library";
 import {getCookie} from "../../utils/cookie";
 import {modal} from "../../components/bootstrap/modal";
-import {FormInput} from "../../components/bootstrap/form";
+import {RawFormInput} from "../../components/bootstrap/form";
 import routes from "../../utils/routes";
 
 
@@ -69,7 +69,7 @@ function showLibraryMenu(library) {
       return (
         m("form", {onsubmit: formSubmit}, [
           m("div.mb-3", [
-            m(FormInput, {
+            m(RawFormInput, {
               labelText: "Name",
               oninput: (e) => {
                 libraryFormData.library["name"] = e.target.value
@@ -101,7 +101,7 @@ function showLibraryMenu(library) {
 }
 
 
-let LibraryListView = {
+const LibraryListView = {
   view: () => (
     m("table.table table-hover", [
       m("thead",

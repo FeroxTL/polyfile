@@ -6,7 +6,7 @@ import showImageViewer from "../../components/image_viewer";
 import {MimeIcon, IconClasses} from "../../utils/mimetypes";
 
 
-let NodeItem = {
+const NodeItem = {
   view: function(vnode) {
     const {node, attributes=[]} = vnode.attrs;
     const iconOptions = {};
@@ -35,7 +35,7 @@ let NodeItem = {
 };
 
 
-let RowDirectoryItem = {
+const RowDirectoryItem = {
   onShowMenuClick: function(node, e) {
     e.preventDefault();
     showNodeMenu(node);
@@ -63,7 +63,7 @@ let RowDirectoryItem = {
 };
 
 
-let RowFileItem = {
+const RowFileItem = {
   onShowMenuClick: function(node, e) {
     e.preventDefault();
     showNodeMenu(node);
@@ -102,7 +102,7 @@ let RowFileItem = {
 };
 
 
-let RowItem = {
+const RowItem = {
   view: function(vnode) {
     let {node} = vnode.attrs;
 
@@ -114,7 +114,7 @@ let RowItem = {
 };
 
 
-let NodeListView = {
+const NodeListView = {
   view: function () {
     const nodes = globalNodesData.list;
 

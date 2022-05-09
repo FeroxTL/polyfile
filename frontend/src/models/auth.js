@@ -4,10 +4,11 @@ import {getCookie} from "../utils/cookie";
 
 function CurrentUser(data) {
   this.fullName= data["full_name"] || "";
+  this.isSuperuser= data["is_superuser"] || false;
 }
 
 
-let Auth = {
+const Auth = {
   currentUser: null,
 
   getCurrentUser: function() {

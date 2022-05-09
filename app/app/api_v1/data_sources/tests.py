@@ -45,9 +45,7 @@ class DataSourceTests(APITestCase):
         data = {
             'name': 'Foo',
             'data_provider_id': TestProvider.provider_id,
-            'options': [
-                {'key': 'foo', 'value': 'bar'}
-            ],
+            'options': {'foo': 'bar'},
         }
 
         # list
@@ -64,6 +62,16 @@ class DataSourceTests(APITestCase):
         self.assertEqual(ds.data_provider_id, TestProvider.provider_id)
         self.assertDictEqual(ds.options_dict, {'foo': 'bar'})
 
+        # no such data_provider_id
+        data = {
+            'name': 'Foo',
+            'data_provider_id': 'does-not-exist',
+            'options': {},
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'data_provider_id': ['"does-not-exist" is not a valid choice.']})
+
     class MyForm(forms.Form):
         foo = fields.CharField(required=True, min_length=2)
 
@@ -72,7 +80,7 @@ class DataSourceTests(APITestCase):
         data = {
             'name': 'Foo',
             'data_provider_id': TestProvider.provider_id,
-            'options': [],
+            'options': {},
         }
         with mock.patch.object(TestProvider, 'validation_class', new_callable=PropertyMock) as p:
             p.return_value = self.MyForm
@@ -85,7 +93,7 @@ class DataSourceTests(APITestCase):
         data = {
             'name': 'Foo',
             'data_provider_id': TestProvider.provider_id,
-            'options': [{'key': 'foo', 'value': '1'}],
+            'options': {'foo': '1'},
         }
         with mock.patch.object(TestProvider, 'validation_class', new_callable=PropertyMock) as p:
             p.return_value = self.MyForm
@@ -100,7 +108,7 @@ class DataSourceTests(APITestCase):
         data = {
             'name': 'Foo',
             'data_provider_id': TestProvider.provider_id,
-            'options': [{'key': 'foo', 'value': 'bar'}],
+            'options': {'foo': 'bar'},
         }
         with mock.patch.object(TestProvider, 'validation_class', new_callable=PropertyMock) as p:
             p.return_value = self.MyForm
@@ -117,7 +125,7 @@ class DataSourceTests(APITestCase):
         data = {
             'name': 'Foo',
             'data_provider_id': TestProvider.provider_id,
-            'options': [],
+            'options': {},
         }
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, 200)

@@ -8,7 +8,7 @@ function Library(data) {
 }
 
 
-let LibraryData = function () {
+const LibraryData = function() {
   this.list = [];
   this.status = null;
   this.error = null;
@@ -39,7 +39,7 @@ let LibraryData = function () {
 };
 
 
-let globalLibraryData = new LibraryData();
+const globalLibraryData = new LibraryData();
 
 
 export {globalLibraryData, Library};

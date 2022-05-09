@@ -1,5 +1,5 @@
 import m from "mithril";
-import {FormInput} from "../../components/bootstrap/form";
+import {RawFormInput} from "../../components/bootstrap/form";
 import {modal} from "../../components/bootstrap/modal";
 import {getCookie} from "../../utils/cookie";
 import {globalLibraryData, Library} from "../../models/library";
@@ -37,14 +37,14 @@ function showCreateLibraryModal() {
       return (
         m("form", {onsubmit: formSubmit}, [
           m("div.mb-3", [
-            m(FormInput, {
+            m(RawFormInput, {
               labelText: "Name",
               oninput: (e) => {libraryFormData.library["name"] = e.target.value},
               value: libraryFormData.library["name"],
             })
           ]),
           m("div.mb-3", [
-            m(FormInput, {
+            m(RawFormInput, {
               labelText: "Data source",
               oninput: (e) => {libraryFormData.library["data_source"] = e.target.value},
               value: libraryFormData.library["data_source"],

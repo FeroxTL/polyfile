@@ -17,6 +17,7 @@ class FileStorageForm(forms.Form):
         required=True,
         max_length=get_field(DataSourceOption, 'value').max_length,
         label='Root directory',
+        help_text='Root directory on server. Must exist',
     )
 
     def clean(self):

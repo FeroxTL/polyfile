@@ -16,6 +16,7 @@ class SystemTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'full_name': self.user.full_name,
+            'is_superuser': self.user.is_superuser,
         })
 
         # anonymous

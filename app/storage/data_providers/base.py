@@ -67,10 +67,13 @@ class ProviderRegister:
     def __init__(self):
         self._registry = {}
 
+    def has_provider(self, provider_id: str):
+        return provider_id in self._registry
+
     def register(self, provider: TypeBaseProvider):
         self._registry[provider.provider_id] = provider
 
-    def get_provider(self, provider_id) -> TypeBaseProvider:
+    def get_provider(self, provider_id: str) -> TypeBaseProvider:
         return self._registry[provider_id]
 
     @property

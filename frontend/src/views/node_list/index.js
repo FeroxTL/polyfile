@@ -6,6 +6,7 @@ import {modal} from "../../components/bootstrap/modal";
 import TopNavBarNodeMenu from "./top_navbar_node_menu";
 import NodeBreadcrumbs from "./node_breadcrumbs";
 import NodeListView from "./node_list_view";
+import {getMenuItems} from "../../models/menu";
 
 
 let NodeListWrapperView = {
@@ -13,7 +14,7 @@ let NodeListWrapperView = {
     return [
       m(SideNavView, {
           topNavBarComponent: TopNavBarNodeMenu,
-          ...vnode.attrs
+          sideMenuItems: getMenuItems(),
         },
         globalNodesData.status === "done" ? [
           m(NodeBreadcrumbs, vnode.attrs),

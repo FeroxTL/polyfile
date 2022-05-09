@@ -1,5 +1,7 @@
-from django.db import transaction
-from rest_framework import serializers
+from django.db import transaction, models
+from rest_framework import serializers, exceptions
+from rest_framework.settings import api_settings
+from rest_framework.utils import html
 
 from app.utils.models import get_field
 from storage.data_providers.base import provider_registry
@@ -26,11 +28,10 @@ class DataSourceOptionsListSerializer(serializers.ListSerializer):
         else:
             data_provider_id = self.parent.initial_data.get('data_provider_id')
 
-        assert data_provider_id is not None
-
-        options = {option['key']: option['value'] for option in attrs}
-        provider_cls = provider_registry.get_provider(data_provider_id)
-        provider_cls.validate_options(options=options)
+        if data_provider_id and provider_registry.has_provider(data_provider_id):
+            options = {option['key']: option['value'] for option in attrs}
+            provider_cls = provider_registry.get_provider(data_provider_id)
+            provider_cls.validate_options(options=options)
         return attrs
 
     def update(self, instance: DataSource, validated_data: list):
@@ -48,6 +49,46 @@ class DataSourceOptionsListSerializer(serializers.ListSerializer):
             for option in validated_data
         ]
         DataSourceOption.objects.bulk_create(data_sources)
+
+    def to_representation(self, data):
+        """List if object instances -> Dict of primitive datatypes (key:value)."""
+        iterable = data.all() if isinstance(data, models.Manager) else data
+
+        return {
+            item.key: item.value
+            for item in iterable
+        }
+
+    def to_internal_value(self, data):
+        """Dict of native values <- Dict of primitive datatypes."""
+        if html.is_html_input(data):
+            data = html.parse_html_list(data, default=[])
+
+        if not isinstance(data, dict):
+            # todo: not_a_dict
+            message = self.error_messages['not_a_list'].format(
+                input_type=type(data).__name__
+            )
+            raise exceptions.ValidationError({
+                api_settings.NON_FIELD_ERRORS_KEY: [message]
+            }, code='not_a_list')
+
+        ret = []
+        errors = []
+
+        for key, item in data.items():
+            try:
+                validated = self.child.run_validation({'key': key, 'value': item})
+            except exceptions.ValidationError as exc:
+                errors.append(exc.detail)
+            else:
+                ret.append(validated)
+                errors.append({})
+
+        if any(errors):
+            raise exceptions.ValidationError(errors)
+
+        return ret
 
 
 class DataSourceSerializer(serializers.ModelSerializer):

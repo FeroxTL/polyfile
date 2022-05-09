@@ -5,6 +5,7 @@ import {Loader} from "../../components/bootstrap/loader";
 import {modal} from "../../components/bootstrap/modal";
 import TopNavBarLibraryMenu from "./top_bar_library_menu";
 import LibraryListView from "./library_list_view";
+import {getMenuItems} from "../../models/menu";
 
 
 let LibraryListWrapperView = {
@@ -12,6 +13,7 @@ let LibraryListWrapperView = {
   view: function () {
     return m(SideNavView, {
       topNavBarComponent: TopNavBarLibraryMenu,
+      sideMenuItems: getMenuItems(),
     }, [
       globalLibraryData.status === "done" ? m(LibraryListView) : m(Loader),
       modal.renderModal(),

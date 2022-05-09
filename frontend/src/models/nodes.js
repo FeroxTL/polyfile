@@ -24,7 +24,7 @@ function Node(data) {
 }
 
 
-let NodesData = function () {
+const NodesData = function() {
   this.list = [];
   this.status = null;
   this.error = null;
@@ -76,7 +76,7 @@ let NodesData = function () {
 };
 
 
-let globalNodesData = new NodesData();
+const globalNodesData = new NodesData();
 
 
 export {globalNodesData, Node};

@@ -15,17 +15,22 @@ document.addEventListener('click', function(e) {
 });
 
 
-let NavDropDownDivider = {
+const NavDropDownDivider = {
   view: () => (m("hr.dropdown-divider"))
 };
 
 
-let NavDropDownItem = {
-  view: (vnode) => (m("li", m("a.dropdown-item[href=#]", vnode.attrs, vnode.children)))
+const NavDropDownItem = {
+  view: (vnode) => (m("li", m(m.route.Link, {class: "dropdown-item", ...vnode.attrs}, vnode.children)))
 };
 
 
-let NavDropDown = {
+const NavDropDownRawItem = {
+  view: (vnode) => (m("li", m("span[role=button]", {class: "dropdown-item", ...vnode.attrs}, vnode.children)))
+};
+
+
+const NavDropDown = {
   oninit: (vnode) => {
     dropDownState[vnode.attrs.id] = false;
   },
@@ -61,7 +66,7 @@ let NavDropDown = {
 };
 
 
-let DropDown = {
+const DropDown = {
   oninit: function(vnode) {
     this.id = vnode.attrs.id;
     dropDownState[this.id] = false;
@@ -105,4 +110,5 @@ export {
   NavDropDownItem,
   NavDropDownDivider,
   DropDown,
+  NavDropDownRawItem,
 };

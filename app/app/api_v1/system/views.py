@@ -1,7 +1,5 @@
 from django.urls import reverse
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import generics, permissions, response, views
 
 from accounts.models import User
 from app.api_v1.system.serializers import CurrentUserSerializer
@@ -16,12 +14,12 @@ class CurrentUserView(generics.RetrieveAPIView):
         return self.request.user
 
 
-class ApiIndex(APIView):
+class ApiIndex(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @staticmethod
     def get(request):
         # todo: use this for global menu? add permissions? or enable only in debug mode?
-        return Response([
+        return response.Response([
             {'url': reverse('api_v1:lib-list')},
         ])

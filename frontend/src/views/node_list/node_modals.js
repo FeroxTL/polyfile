@@ -2,7 +2,7 @@ import m from "mithril";
 import {getCookie} from "../../utils/cookie";
 import {globalNodesData, Node} from "../../models/nodes";
 import {modal} from "../../components/bootstrap/modal";
-import {FormInput} from "../../components/bootstrap/form";
+import {RawFormInput} from "../../components/bootstrap/form";
 
 
 function showCreateDirectoryModal(lib_id, path) {
@@ -42,7 +42,7 @@ function showCreateDirectoryModal(lib_id, path) {
       return (
         m("form", {onsubmit: formSubmit}, [
           m("div.mb-3", [
-            m(FormInput, {
+            m(RawFormInput, {
               labelText: "Name",
               oninput: (e) => {
                 nodeFormData.instance["name"] = e.target.value
@@ -143,7 +143,7 @@ function showNodeMenu(node) {
       return (
         m("form", {onsubmit: formSubmit}, [
           m("div.mb-3", [
-            m(FormInput, {
+            m(RawFormInput, {
               labelText: "Name",
               oninput: (e) => {nodeFormData.node["name"] = e.target.value},
               value: nodeFormData.node["name"],
