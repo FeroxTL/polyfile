@@ -1,6 +1,6 @@
 import {Loader} from "../../components/bootstrap/loader";
 import m from "mithril";
-import {FieldAttrs, FormAutoField, FormInput} from "../../components/bootstrap/form";
+import {FieldAttrs, FormAutoField} from "../../components/bootstrap/form";
 import {modal} from "../../components/bootstrap/modal";
 import {getCookie} from "../../utils/cookie";
 
