@@ -1,59 +1,83 @@
 # todo: write :exception in class/method descriptions
+import typing
+from functools import partial
+
 from django.db import transaction
+from django.db.models import F, Value, TextField
+from django.db.models.functions import Concat
+from django_cte import With
 
 from storage.data_providers.exceptions import ProviderException
 from storage.data_providers.utils import get_data_provider
 from storage.models import Node, DataLibrary
 
 
-# def get_parent_path(path: str):
-#     path_list = path.rsplit('/', 2)
-#     if len(path_list) >= 2:
-#         last_is_directory = path_list[-1] == ''
-#         # path[-2]!='' means path_list=['', '']
-#         if last_is_directory and path_list[-2] != '':
-#             path_list.pop(-2)
-#         else:
-#             path_list[-1] = ''
-#     elif len(path_list) == 1:
-#         path_list.append('')
-#     return '/'.join(path_list)
+def adapt_path(path: str) -> str:
+    """
+    Adapts path to CTE queryset appropriate.
+
+    "" -> ""
+    "/" -> ""
+    "/foo/" -> "/foo"
+    "foo/" -> "/foo"
+    "/foo/bar.jpg" -> "/foo/bar.jpg"
+
+    :param path: input path
+    :return: filtered path with slashes only between elements
+    """
+    path_list = filter(None, path.split('/'))
+
+    return '/'.join(['', *path_list])
 
 
-def get_node_by_path(root_node: Node, path: str, last_node_type: str = None) -> Node:
+def _make_node_cte(cte, **params):
+    # non-recursive: get root nodes
+    return Node.cte_objects.filter(
+        parent__isnull=True,
+        **params,
+    ).values(
+        'pk',
+        'name',
+        path=F('name'),
+    ).union(
+        # recursive union: get descendants
+        cte.join(Node, parent=cte.col.pk).values(
+            'pk',
+            'name',
+            path=Concat(
+                cte.col.path, Value('/'), F('name'),
+                output_field=TextField(),
+            ),
+        ),
+        all=True,
+    )
+
+
+def get_node_by_path(root_node_id: int, path: str, last_node_type: typing.Optional[str] = None) -> Node:
     """
     Get node by path in root directory.
 
     Raises:
          Node.DoesNotExist if node is not found.
     """
-    path_list = path.split('/')
+    cte = With.recursive(partial(_make_node_cte, pk=root_node_id))
+    path = adapt_path(path)
+    node_cte_qs = (
+        cte.join(Node.cte_objects.all(), pk=cte.col.pk)
+        .with_cte(cte)
+        .annotate(
+            path=cte.col.path,
+        )
+        .filter(path=path)
+        .order_by('path')
+    )
 
-    if path_list[0] == '':
-        path_list.pop(0)
+    node = node_cte_qs.get()
 
-    if not path_list:
-        return root_node
+    if last_node_type is not None and last_node_type != node.file_type:
+        raise Node.DoesNotExist('Incorrect node type')
 
-    list_last_directory = path_list[-1] == ''
-
-    if list_last_directory:
-        path_list.pop(-1)
-
-    current_node = root_node
-
-    for i, path_item in enumerate(path_list):
-        if i == len(path_list) - 1 and not list_last_directory:
-            extra_params = {'file_type': Node.FileTypeChoices.FILE}
-        else:
-            extra_params = {'file_type': Node.FileTypeChoices.DIRECTORY}
-        current_node = current_node.get_children().get(name=path_item, **extra_params)
-
-    if last_node_type is not None:
-        if current_node.file_type != last_node_type:
-            raise Node.DoesNotExist('Incorrect node type')
-
-    return current_node
+    return node
 
 
 def remove_node(library: DataLibrary, path: str):
@@ -67,7 +91,7 @@ def remove_node(library: DataLibrary, path: str):
     :exception ProviderException -- can not remove Node
     """
     data_provider = get_data_provider(library=library)
-    current_node = get_node_by_path(root_node=library.root_dir, path=path)
+    current_node = get_node_by_path(root_node_id=library.root_dir_id, path=path)
 
     if current_node == library.root_dir:
         raise ProviderException('Can not remove root directory')

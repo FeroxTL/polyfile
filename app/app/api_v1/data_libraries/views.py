@@ -70,7 +70,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         self.library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(root_node=self.library.root_dir, path=path)
+            return get_node_by_path(root_node_id=self.library.root_dir_id, path=path)
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
@@ -114,7 +114,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
         self.library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(root_node=self.library.root_dir, path=path)
+            return get_node_by_path(root_node_id=self.library.root_dir_id, path=path)
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
@@ -147,7 +147,7 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
         self.library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(root_node=self.library.root_dir, path=path)
+            return get_node_by_path(root_node_id=self.library.root_dir_id, path=path)
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
@@ -166,6 +166,7 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
 class NodeUploadFileView(generics.CreateAPIView):
     """Upload file to library."""
     serializer_class = node_serializers.NodeCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
 
     def get_queryset(self):
@@ -191,6 +192,7 @@ class NodeUploadFileView(generics.CreateAPIView):
 class DataLibraryMkdirView(generics.CreateAPIView):
     """Create directory in library."""
     serializer_class = node_serializers.MkDirectorySerializer
+    permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
 
     def get_library(self, lib_id: UUID) -> DataLibrary:
@@ -204,6 +206,7 @@ class DataLibraryMkdirView(generics.CreateAPIView):
 class DataLibraryRmFileView(generics.DestroyAPIView):
     """Remove file or directory (must be empty)."""
     serializer_class = node_serializers.NodeCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
     queryset = Node.objects.none()
 
@@ -226,6 +229,7 @@ class DataLibraryRmFileView(generics.DestroyAPIView):
 
 class DataLibraryDownloadView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'lib_id'
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Node.objects.none()
 
     def get_library(self, lib_id: UUID) -> DataLibrary:
@@ -237,7 +241,11 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
         try:
             library = self.get_library(self.kwargs[self.lookup_url_kwarg])
             provider = get_data_provider(library)
-            node = get_node_by_path(library.root_dir, path, last_node_type=Node.FileTypeChoices.FILE)
+            node = get_node_by_path(
+                root_node_id=library.root_dir_id,
+                path=path,
+                last_node_type=Node.FileTypeChoices.FILE
+            )
             file: File = provider.open_file(path=path)
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
             raise exceptions.NotFound(str(e))

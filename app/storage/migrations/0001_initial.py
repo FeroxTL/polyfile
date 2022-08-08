@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=255)),
                 ('data_source', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='storage.datasource', verbose_name='Data source')),
                 ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('root_dir', models.ForeignKey(limit_choices_to={'depth': 1}, on_delete=django.db.models.deletion.PROTECT, to='storage.node', verbose_name='Root directory')),
+                ('root_dir', models.ForeignKey(limit_choices_to={'parent__isnull': True}, on_delete=django.db.models.deletion.PROTECT, to='storage.node', verbose_name='Root directory')),
             ],
             options={
                 'verbose_name': 'Data library',

@@ -2,12 +2,13 @@ from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm, ChoiceField
-from treebeard.admin import TreeAdmin
-from treebeard.forms import movenodeform_factory
 
 from storage.data_providers.base import provider_registry
 from storage.data_providers.utils import get_data_provider, get_data_provider_class
-from storage.models import DataLibrary, DataSource, DataSourceOption, Node
+from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype
+
+
+admin.site.register(Mimetype)
 
 
 class DataSourceAdminForm(ModelForm):
@@ -78,10 +79,10 @@ class DataSourceAdmin(admin.ModelAdmin):
 
 
 @admin.register(DataLibrary)
-class LibraryAdmin(admin.ModelAdmin):
+class DataLibraryAdmin(admin.ModelAdmin):
     readonly_fields = ['id']
     list_display = ['name', 'owner', 'data_source']
-    raw_id_fields = ['owner']
+    raw_id_fields = ['owner', 'root_dir']
     list_filter = ['data_source']
 
     def save_model(self, request, obj, form, change):
@@ -92,5 +93,14 @@ class LibraryAdmin(admin.ModelAdmin):
 
 
 @admin.register(Node)
-class NodeAdmin(TreeAdmin):
-    form = movenodeform_factory(Node)
+class NodeAdmin(admin.ModelAdmin):
+    raw_id_fields = ['parent']
+    list_display = ['name_str', 'file_type']
+
+    list_filter = [
+        ('parent', admin.EmptyFieldListFilter),
+    ]
+
+    @admin.display(description='Name')
+    def name_str(self, instance):
+        return instance.name or '<no name>'

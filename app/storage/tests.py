@@ -29,32 +29,32 @@ class StorageTests(TestCase):
         file_path = f'{directory_path}{file.name}'
 
         # root
-        node = get_node_by_path(data_library.root_dir, root_path)
+        node = get_node_by_path(data_library.root_dir_id, root_path)
         self.assertEqual(node, data_library.root_dir)
 
         # relative root
-        node = get_node_by_path(data_library.root_dir, '')
+        node = get_node_by_path(data_library.root_dir_id, '')
         self.assertEqual(node, data_library.root_dir)
 
         # directory
-        node = get_node_by_path(data_library.root_dir, directory_path)
+        node = get_node_by_path(data_library.root_dir_id, directory_path)
         self.assertEqual(node, directory)
 
         # relative directory
-        node = get_node_by_path(data_library.root_dir, directory_path[1:])
+        node = get_node_by_path(data_library.root_dir_id, directory_path[1:])
         self.assertEqual(node, directory)
 
         # file
-        node = get_node_by_path(data_library.root_dir, file_path)
+        node = get_node_by_path(data_library.root_dir_id, file_path)
         self.assertEqual(node, file)
 
         # relative file
-        node = get_node_by_path(data_library.root_dir, file_path[1:])
+        node = get_node_by_path(data_library.root_dir_id, file_path[1:])
         self.assertEqual(node, file)
 
         # does not exist
         with self.assertRaises(Node.DoesNotExist):
-            get_node_by_path(data_library.root_dir, '/does-not-exist/')
+            get_node_by_path(data_library.root_dir_id, '/does-not-exist/')
 
 
 class FileSystemStorageProviderTests(TestCase):
@@ -292,6 +292,10 @@ class DataSourceAdminTest(TestCase):
         self.assertEqual(data_source.data_provider_id, TestProvider.provider_id)
         self.assertDictEqual(data_source.options_dict, {'foo': 'bar'})
 
+        url = reverse('admin:storage_datasource_changelist')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
     def test_datasource_update(self):
         """Ensure we can update DataSource."""
         datasource = DataSourceFactory()
@@ -379,6 +383,10 @@ class DataLibraryAdminTest(TestCase):
             response = self.client.post(url, data)
             self.assertEqual(response.status_code, 302)
             init_library.assert_called()
+
+        url = reverse('admin:storage_datalibrary_changelist')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
 
     def test_change_library(self):
         """Ensure DataLibrary is not reinitialized on update."""

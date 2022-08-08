@@ -55,9 +55,9 @@ class NodeCreateSerializer(NodeSerializer):
 
         try:
             parent_node = get_node_by_path(
-                root_node=library.root_dir,
+                root_node_id=library.root_dir_id,
                 path=path,
-                last_node_type=Node.FileTypeChoices.DIRECTORY
+                last_node_type=Node.FileTypeChoices.DIRECTORY,
             )
         except Node.DoesNotExist as e:
             # todo one style for all errors
@@ -110,9 +110,9 @@ class NodeMoveSerializer(serializers.ModelSerializer):
         # super().update(instance, validated_data)
 
         try:
-            source_node = get_node_by_path(root_node=library.root_dir, path=source_path)
+            source_node = get_node_by_path(root_node_id=library.root_dir_id, path=source_path)
             target_directory = get_node_by_path(
-                root_node=library.root_dir,
+                root_node_id=library.root_dir_id,
                 path=target_path,
                 last_node_type=Node.FileTypeChoices.DIRECTORY
             )
@@ -195,7 +195,7 @@ class MkDirectorySerializer(NodeSerializer):
         data_provider = get_data_provider(library=library)
 
         try:
-            parent_node = get_node_by_path(root_node=library.root_dir, path=path)
+            parent_node = get_node_by_path(root_node_id=library.root_dir_id, path=path)
         except Node.DoesNotExist as e:
             raise exceptions.ParseError(str(e))
 

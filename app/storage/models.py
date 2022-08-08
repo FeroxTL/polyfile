@@ -4,8 +4,7 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.utils import timezone
-from treebeard.mp_tree import MP_Node
+from django_cte import CTEManager
 
 
 class DataSource(models.Model):
@@ -80,7 +79,7 @@ class DataLibrary(models.Model):
     root_dir = models.ForeignKey(
         'storage.Node',
         verbose_name='Root directory',
-        limit_choices_to={'depth': 1},
+        limit_choices_to={'parent__isnull': True},
         on_delete=models.PROTECT,
     )
 
@@ -90,6 +89,7 @@ class DataLibrary(models.Model):
 
     objects = models.Manager()
     DoesNotExist: ObjectDoesNotExist
+    root_dir_id: typing.Optional[int]
 
     def __str__(self):
         return self.name
@@ -108,8 +108,11 @@ class Mimetype(models.Model):
 
     objects = models.Manager()
 
+    def __str__(self):
+        return self.name
 
-class Node(MP_Node):
+
+class Node(models.Model):
     """File or directory."""
     name = models.CharField(
         verbose_name='Name',
@@ -140,14 +143,20 @@ class Node(MP_Node):
         blank=True, null=True,
     )
 
-    # auto_now_add=True is incompatible with MP_Node
+    parent = models.ForeignKey(
+        'self',
+        related_name='children_set',
+        null=True, db_index=True,
+        on_delete=models.PROTECT,
+    )
+
     created_at = models.DateTimeField(
         verbose_name='Created',
-        default=timezone.now,
+        auto_now_add=True,
     )
     updated_at = models.DateTimeField(
         verbose_name='Updated',
-        default=timezone.now,
+        auto_now=True,
     )
 
     class Meta:
@@ -157,6 +166,8 @@ class Node(MP_Node):
     node_order_by = ['name', 'file_type']
     get_file_type_display: typing.Callable
     DoesNotExist: typing.Type[ObjectDoesNotExist]
+    objects = models.Manager()
+    cte_objects = CTEManager()
 
     def __str__(self):
         return '{}: {}'.format(self.get_file_type_display(), self.name or '<root>')
@@ -164,3 +175,16 @@ class Node(MP_Node):
     @property
     def is_directory(self):
         return self.file_type == self.FileTypeChoices.DIRECTORY
+
+    @classmethod
+    def add_root(cls, **kwargs):
+        return cls.objects.create(parent=None, **kwargs)
+
+    def add_child(self, **kwargs):
+        return Node.objects.create(parent=self, **kwargs)
+
+    def get_children(self):
+        return Node.objects.filter(parent=self)
+
+    def get_children_count(self):
+        return self.get_children().count()
