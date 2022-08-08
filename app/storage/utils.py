@@ -53,14 +53,23 @@ def _make_node_cte(cte, **params):
     )
 
 
-def get_node_by_path(root_node_id: int, path: str, last_node_type: typing.Optional[str] = None) -> Node:
+def get_node_by_path(
+        library: DataLibrary,
+        path: str,
+        last_node_type: typing.Optional[str] = None
+) -> Node:
     """
     Get node by path in root directory.
+
+    :param library: DataLibrary of node
+    :param path: path relative to root directory ("/foo/bar.jpg")
+    :param last_node_type: optional, asserts last node (bar.jpg) has specified file_type
+    :return: Node in requested path
 
     Raises:
          Node.DoesNotExist if node is not found.
     """
-    cte = With.recursive(partial(_make_node_cte, pk=root_node_id))
+    cte = With.recursive(partial(_make_node_cte, pk=library.root_dir_id))
     path = adapt_path(path)
     node_cte_qs = (
         cte.join(Node.cte_objects.all(), pk=cte.col.pk)
@@ -91,7 +100,7 @@ def remove_node(library: DataLibrary, path: str):
     :exception ProviderException -- can not remove Node
     """
     data_provider = get_data_provider(library=library)
-    current_node = get_node_by_path(root_node_id=library.root_dir_id, path=path)
+    current_node = get_node_by_path(library=library, path=path)
 
     if current_node == library.root_dir:
         raise ProviderException('Can not remove root directory')

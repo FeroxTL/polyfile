@@ -29,32 +29,32 @@ class StorageTests(TestCase):
         file_path = f'{directory_path}{file.name}'
 
         # root
-        node = get_node_by_path(data_library.root_dir_id, root_path)
+        node = get_node_by_path(data_library, root_path)
         self.assertEqual(node, data_library.root_dir)
 
         # relative root
-        node = get_node_by_path(data_library.root_dir_id, '')
+        node = get_node_by_path(data_library, '')
         self.assertEqual(node, data_library.root_dir)
 
         # directory
-        node = get_node_by_path(data_library.root_dir_id, directory_path)
+        node = get_node_by_path(data_library, directory_path)
         self.assertEqual(node, directory)
 
         # relative directory
-        node = get_node_by_path(data_library.root_dir_id, directory_path[1:])
+        node = get_node_by_path(data_library, directory_path[1:])
         self.assertEqual(node, directory)
 
         # file
-        node = get_node_by_path(data_library.root_dir_id, file_path)
+        node = get_node_by_path(data_library, file_path)
         self.assertEqual(node, file)
 
         # relative file
-        node = get_node_by_path(data_library.root_dir_id, file_path[1:])
+        node = get_node_by_path(data_library, file_path[1:])
         self.assertEqual(node, file)
 
         # does not exist
         with self.assertRaises(Node.DoesNotExist):
-            get_node_by_path(data_library.root_dir_id, '/does-not-exist/')
+            get_node_by_path(data_library, '/does-not-exist/')
 
 
 class FileSystemStorageProviderTests(TestCase):

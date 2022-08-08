@@ -70,7 +70,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         self.library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(root_node_id=self.library.root_dir_id, path=path)
+            return get_node_by_path(library=self.library, path=path)
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
@@ -114,7 +114,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
         self.library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(root_node_id=self.library.root_dir_id, path=path)
+            return get_node_by_path(library=self.library, path=path)
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
@@ -147,7 +147,7 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
         self.library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(root_node_id=self.library.root_dir_id, path=path)
+            return get_node_by_path(library=self.library, path=path)
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
@@ -242,7 +242,7 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
             library = self.get_library(self.kwargs[self.lookup_url_kwarg])
             provider = get_data_provider(library)
             node = get_node_by_path(
-                root_node_id=library.root_dir_id,
+                library=library,
                 path=path,
                 last_node_type=Node.FileTypeChoices.FILE
             )
