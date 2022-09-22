@@ -1,37 +1,51 @@
 import typing
+from abc import abstractmethod, ABC
 
 from django.core.exceptions import ValidationError
-from django.core.files import File
-from django.core.files.uploadedfile import UploadedFile
+from django.core.files.storage import Storage
 from django.forms import forms
+from django.utils.timezone import now
 
-from storage.models import DataLibrary
+if typing.TYPE_CHECKING:
+    from storage.models import Node, DataLibrary
 
 
-class BaseProvider:
+class BaseProvider(ABC):
     validation_class: forms.Form = forms.Form
 
     @property
+    @abstractmethod
     def provider_id(self) -> str:
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def verbose_name(self) -> str:
-        raise NotImplementedError
+        pass
 
-    def __init__(self, library: DataLibrary, options: dict):
+    @abstractmethod
+    def get_storage(self) -> Storage:
+        pass
+
+    def __init__(self, options: dict, node: typing.Optional['Node'] = None):
         super().__init__()
-        self.library = library
         self.options = options
+        self.node = node
+        self.storage = self.get_storage()
 
     def __str__(self):
         return self.verbose_name
 
-    def init_provider(self):
+    def init_library(self, library: 'DataLibrary'):
         pass
 
-    def init_library(self):
-        pass
+    @staticmethod
+    def get_upload_to(instance: 'Node', filename: str):
+        return 'lib_{lib_id}/{dt}/{filename}'.format(
+            lib_id=instance.data_library_id,
+            dt=now().strftime('%Y.%d'),
+            filename=filename,
+        )
 
     @classmethod
     def transform_options(cls, options: dict):
@@ -44,21 +58,6 @@ class BaseProvider:
     @classmethod
     def validate_options(cls, options: dict):
         return cls.transform_options(options)
-
-    def upload_file(self, path: str, uploaded_file: UploadedFile):
-        raise NotImplementedError
-
-    def open_file(self, path: str) -> File:
-        raise NotImplementedError
-
-    def mkdir(self, target_path: str):
-        raise NotImplementedError
-
-    def rm(self, path: str):
-        raise NotImplementedError
-
-    def rename(self, path: str, name: str):
-        raise NotImplementedError
 
 
 class ProviderRegister:

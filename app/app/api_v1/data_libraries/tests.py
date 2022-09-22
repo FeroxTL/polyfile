@@ -1,7 +1,7 @@
 import tempfile
 import uuid
 from pathlib import Path
-from unittest import mock
+from unittest import mock, skip
 
 from PIL import Image
 from django.urls import reverse
@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.factories import UserFactory
+from app.utils.tests import with_tempdir
 from storage.data_providers.exceptions import ProviderException
 from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory
 from storage.models import DataLibrary, Node
@@ -19,9 +20,10 @@ class LibraryTests(APITestCase):
         self.user = UserFactory()
         self.client.force_login(self.user)
 
-    def test_create_library(self):
+    @with_tempdir
+    def test_create_library(self, temp_dir):
         """Ensure we can create a new NodeLibrary object."""
-        data_source = DataSourceFactory()
+        data_source = DataSourceFactory(options={'location': temp_dir})
         url = reverse('api_v1:lib-list')
         data = {'name': 'FooBar', 'data_source': data_source.pk}
 
@@ -76,7 +78,27 @@ class NodeTests(APITestCase):
         self.client.force_login(self.user)
 
     @staticmethod
-    def to_json(data_library: DataLibrary, current_node: Node, child_nodes=None):
+    def to_json_root(data_library: DataLibrary):
+        child_nodes = Node.objects.filter(parent__isnull=True, data_library=data_library)
+
+        return {
+            'current_node': {},
+            'library': {
+                'data_source': data_library.data_source.pk,
+                'id': str(data_library.pk),
+                'name': data_library.name,
+            },
+            'nodes': [{
+                'file_type': child.file_type,
+                'has_preview': False,
+                'mimetype': child.mimetype and child.mimetype.name,
+                'size': child.size,
+                'name': child.name,
+            } for child in child_nodes]
+        }
+
+    @staticmethod
+    def to_json_node(current_node: Node, child_nodes=None):
         if child_nodes is None:
             child_nodes = current_node.get_children()
 
@@ -89,9 +111,9 @@ class NodeTests(APITestCase):
                 'has_preview': False,
             },
             'library': {
-                'data_source': data_library.data_source.pk,
-                'id': str(data_library.pk),
-                'name': data_library.name,
+                'data_source': current_node.data_library.data_source.pk,
+                'id': str(current_node.data_library.pk),
+                'name': current_node.data_library.name,
             },
             'nodes': [{
                 'file_type': child.file_type,
@@ -109,7 +131,7 @@ class NodeTests(APITestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertDictEqual(response.json(), self.to_json(data_library, data_library.root_dir))
+        self.assertDictEqual(response.json(), self.to_json_root(data_library))
 
         # directory does not exist
         data_library = DataLibraryFactory(owner=self.user)
@@ -125,20 +147,22 @@ class NodeTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
 
-    def test_list_file_node(self):
+    @with_tempdir
+    def test_list_file_node(self, temp_dir):
         """Ensure we can list files too."""
-        data_library = DataLibraryFactory(owner=self.user)
-        file = FileFactory(parent=data_library.root_dir)
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        file = FileFactory(data_library=data_library)
         url = reverse('api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': '/' + file.name})
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertDictEqual(response.json(), self.to_json(data_library, current_node=file, child_nodes=[file]))
+        self.assertDictEqual(response.json(), self.to_json_node(current_node=file, child_nodes=[file]))
 
-    def test_rename_node(self):
+    @with_tempdir
+    def test_rename_node(self, temp_dir):
         """Ensure we can rename node."""
-        data_library = DataLibraryFactory(owner=self.user)
-        file = FileFactory(parent=data_library.root_dir)
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        file = FileFactory(data_library=data_library)
         url = reverse('api_v1:lib-rename', kwargs={'lib_id': str(data_library.pk), 'path': '/' + file.name})
         data = {'name': 'FooBar'}
 
@@ -150,25 +174,23 @@ class NodeTests(APITestCase):
         # try to rename root directory
         url = reverse('api_v1:lib-rename', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         response = self.client.put(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        # todo: 400 bad request
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
 
         # directory does not exist
         url = reverse('api_v1:lib-rename', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist/'})
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
 
-    def test_mkdir(self):
+    @with_tempdir
+    def test_mkdir(self, temp_dir):
         """Ensure we can create directories."""
-        data_library = DataLibraryFactory(owner=self.user)
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
         url = reverse('api_v1:lib-mkdir', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         data = {'name': 'FooBar'}
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-        data_library.root_dir.refresh_from_db()
-        self.assertEqual(data_library.root_dir.get_children().count(), 1)
-        directory = data_library.root_dir.get_children().get()
+        directory = Node.objects.get(parent__isnull=True, data_library=data_library)
         self.assertTrue(directory.pk)
         self.assertDictEqual(response.json(), {
             'file_type': Node.FileTypeChoices.DIRECTORY.value,
@@ -191,48 +213,48 @@ class NodeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
 
-    def test_rm(self):
+    @with_tempdir
+    def test_rm(self, temp_dir):
         """Ensure we can remove our nodes."""
-        data_library = DataLibraryFactory(owner=self.user)
-        file = FileFactory(parent=data_library.root_dir)
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        file = FileFactory(data_library=data_library)
 
         # rm file
         url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/' + file.name})
 
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT, response.data)
-        self.assertEqual(data_library.root_dir.get_children().count(), 0)
         self.assertFalse(Node.objects.filter(pk=file.pk).exists())
 
         # rm directory
-        directory = DirectoryFactory(parent=data_library.root_dir)
+        directory = DirectoryFactory(data_library=data_library)
         url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/' + directory.name + '/'})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT, response.data)
-        self.assertEqual(data_library.root_dir.get_children().count(), 0)
         self.assertFalse(Node.objects.filter(pk=directory.pk).exists())
 
         # rm already removed directory
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
+        self.assertDictEqual(response.json(), {'detail': 'Not found.'})
 
         # rm root directory
         url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Can not remove root directory'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
+        self.assertDictEqual(response.json(), {'detail': 'Not found.'})
 
         # rm not empty directory
-        directory = DirectoryFactory(parent=data_library.root_dir)
+        directory = DirectoryFactory(data_library=data_library)
         FileFactory(parent=directory)
         url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/' + directory.name + '/'})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': f'Can not remove "{directory.name}": is not empty'})
 
-    def test_file_upload(self):
-        data_library = DataLibraryFactory(owner=self.user)
+    @with_tempdir
+    def test_file_upload(self, temp_dir):
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
         url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         image = Image.new('RGB', (100, 100))
 
@@ -270,7 +292,7 @@ class NodeTests(APITestCase):
             self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
 
         # target path is not directory
-        target_node = FileFactory(parent=data_library.root_dir)
+        target_node = FileFactory(data_library=data_library)
         url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': f'/{target_node.name}'})
         with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
             image.save(tmp_file)
@@ -280,6 +302,8 @@ class NodeTests(APITestCase):
             self.assertDictEqual(response.json(), {'detail': 'Incorrect node type'})
 
 
+# todo: incorrect test
+@skip('Remove when DataProviders will be removed')
 class ProviderTests(APITestCase):
     """Testing api and provider integration -- errors and exceptions."""
 

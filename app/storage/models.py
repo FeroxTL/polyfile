@@ -6,6 +6,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django_cte import CTEManager
 
+from storage.data_providers.base import BaseProvider
+from storage.data_providers.utils import get_data_provider_class
+from storage.fields import DynamicStorageFileField
+
 
 class DataSource(models.Model):
     """
@@ -37,6 +41,10 @@ class DataSource(models.Model):
     @property
     def options_dict(self) -> dict:
         return dict(self.options.values_list('key', 'value'))
+
+    def get_provider(self, node: typing.Optional['Node'] = None) -> BaseProvider:
+        provider_class = get_data_provider_class(self.data_provider_id)
+        return provider_class(options=self.options_dict, node=node)
 
 
 class DataSourceOption(models.Model):
@@ -76,12 +84,6 @@ class DataLibrary(models.Model):
         verbose_name='Data source',
         on_delete=models.PROTECT,
     )
-    root_dir = models.ForeignKey(
-        'storage.Node',
-        verbose_name='Root directory',
-        limit_choices_to={'parent__isnull': True},
-        on_delete=models.PROTECT,
-    )
 
     class Meta:
         verbose_name = 'Data library'
@@ -89,7 +91,6 @@ class DataLibrary(models.Model):
 
     objects = models.Manager()
     DoesNotExist: ObjectDoesNotExist
-    root_dir_id: typing.Optional[int]
 
     def __str__(self):
         return self.name
@@ -120,10 +121,19 @@ class Node(models.Model):
         db_index=True,
         blank=True, null=False,
     )
+    file = DynamicStorageFileField(
+        upload_to=DynamicStorageFileField.default_upload_to,  # required for django migrations
+        blank=True,
+    )
     size = models.PositiveIntegerField(
         verbose_name='Size',
         default=0,
         help_text='Size in bytes',
+    )
+    data_library = models.ForeignKey(
+        DataLibrary,
+        verbose_name='Data library',
+        on_delete=models.PROTECT,
     )
 
     class FileTypeChoices(models.TextChoices):
@@ -162,12 +172,19 @@ class Node(models.Model):
     class Meta:
         verbose_name = 'Node'
         verbose_name_plural = 'Nodes'
+        unique_together = [
+            ('name', 'parent', 'data_library'),
+        ]
 
-    node_order_by = ['name', 'file_type']
+    data_library_id: int
     get_file_type_display: typing.Callable
     DoesNotExist: typing.Type[ObjectDoesNotExist]
     objects = models.Manager()
     cte_objects = CTEManager()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._path = None
 
     def __str__(self):
         return '{}: {}'.format(self.get_file_type_display(), self.name or '<root>')
@@ -188,3 +205,13 @@ class Node(models.Model):
 
     def get_children_count(self):
         return self.get_children().count()
+
+    @property
+    def path(self):
+        assert self._path is not None, \
+            'No path was provided using annotations (Node.objects.annotate(...)) or direct assignments.'
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        self._path = value

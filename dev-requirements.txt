@@ -3,3 +3,4 @@
 factory-boy==3.2.1
 coverage==6.3.2
 flake8==4.0.1
+django-debug-toolbar==3.5.0

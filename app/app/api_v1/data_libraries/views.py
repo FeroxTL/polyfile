@@ -3,20 +3,19 @@ import typing
 from uuid import UUID
 
 from django.core.exceptions import SuspiciousFileOperation
-from django.core.files import File
 from django.db import transaction, models
 from django.db.models import Case, When
 from django.http import Http404, FileResponse
 from django.utils import timezone
 from django.utils.http import http_date
-from rest_framework import generics, permissions, exceptions, status
+from rest_framework import generics, permissions, exceptions, serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from app.api_v1.data_libraries.serializers import data_library_serializers, node_serializers
-from storage.data_providers.utils import get_data_provider
+from storage.fields import DynamicStorageFieldFile
 from storage.models import DataLibrary, Node
-from storage.utils import get_node_by_path, remove_node
+from storage.utils import get_node_by_path
 
 
 class DataLibraryListCreateView(generics.ListCreateAPIView):
@@ -28,11 +27,10 @@ class DataLibraryListCreateView(generics.ListCreateAPIView):
         return DataLibrary.objects.filter(owner=self.request.user)
 
     @transaction.atomic
-    def perform_create(self, serializer):
-        root_dir = Node.add_root(name='', file_type=Node.FileTypeChoices.DIRECTORY)
-        serializer.save(owner=self.request.user, root_dir=root_dir)
-        provider = get_data_provider(library=serializer.instance)
-        provider.init_library()
+    def perform_create(self, serializer: serializers.Serializer):
+        data_library: DataLibrary = serializer.save(owner=self.request.user)
+        provider = data_library.data_source.get_provider()
+        provider.init_library(library=data_library)
 
 
 class DataLibraryDetailUpdateView(generics.RetrieveUpdateAPIView):
@@ -56,14 +54,13 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
     """List of nodes in library."""
     permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
-    # todo: serializer_class for openApi
     serializer_class = data_library_serializers.DataLibrarySerializer
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.library: typing.Optional[DataLibrary] = None
 
-    def get_object(self) -> Node:
+    def get_object(self) -> typing.Optional[Node]:
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
         filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
@@ -89,7 +86,10 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         current_node = self.get_object()
-        child_nodes = self.get_child_nodes(current_node)
+        if current_node is None:
+            child_nodes = Node.objects.filter(parent__isnull=True, data_library=self.library)
+        else:
+            child_nodes = self.get_child_nodes(current_node)
 
         return Response({
             'library': data_library_serializers.DataLibrarySerializer(self.library).data,
@@ -136,31 +136,19 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
     serializer_class = node_serializers.NodeRenameSerializer
     queryset = Node.objects.none()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.library: typing.Optional[DataLibrary] = None
-
     def get_object(self):
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
         filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
-        self.library = get_object_or_404(queryset, **filter_kwargs)
+        library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            return get_node_by_path(library=self.library, path=path)
+            node = get_node_by_path(library=library, path=path)
+            if node is None:
+                raise Node.DoesNotExist
+            return node
         except Node.DoesNotExist as e:
             raise Http404(str(e))
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({
-            'library': self.library,
-            'path': self.kwargs['path'],
-        })
-        return context
-
-    def perform_update(self, serializer):
-        serializer.save(updated_at=timezone.now())
 
 
 class NodeUploadFileView(generics.CreateAPIView):
@@ -203,9 +191,8 @@ class DataLibraryMkdirView(generics.CreateAPIView):
         serializer.save(library=library, owner=self.request.user, path=self.kwargs['path'])
 
 
-class DataLibraryRmFileView(generics.DestroyAPIView):
+class DataLibraryDeleteNodeView(generics.DestroyAPIView):
     """Remove file or directory (must be empty)."""
-    serializer_class = node_serializers.NodeCreateSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
     queryset = Node.objects.none()
@@ -213,18 +200,30 @@ class DataLibraryRmFileView(generics.DestroyAPIView):
     def get_library(self, lib_id: UUID) -> DataLibrary:
         return DataLibrary.objects.get(owner=self.request.user, id=lib_id)
 
-    def destroy(self, request, *args, **kwargs):
+    def get_object(self):
         path = self.kwargs['path']
+        queryset = DataLibrary.objects.filter(owner=self.request.user)
+        filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
+        library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            library = self.get_library(self.kwargs[self.lookup_url_kwarg])
-            remove_node(library=library, path=path)
-        except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
-            raise exceptions.NotFound(str(e))
-        except SuspiciousFileOperation as e:
-            raise exceptions.ParseError(str(e))
+            node = get_node_by_path(library=library, path=path)
+            if node is None:
+                raise Node.DoesNotExist
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            if node.is_directory and node.get_children_count():
+                raise exceptions.ParseError(
+                    f'Can not remove "{node.name}": is not empty'
+                )
+
+            return node
+        except Node.DoesNotExist as e:
+            raise Http404(str(e))
+
+    def perform_destroy(self, instance):
+        # todo: maybe we should mark files as deleted and clean them later
+        instance.file.delete()
+        instance.delete()
 
 
 class DataLibraryDownloadView(generics.RetrieveAPIView):
@@ -240,13 +239,13 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
 
         try:
             library = self.get_library(self.kwargs[self.lookup_url_kwarg])
-            provider = get_data_provider(library)
             node = get_node_by_path(
                 library=library,
                 path=path,
                 last_node_type=Node.FileTypeChoices.FILE
             )
-            file: File = provider.open_file(path=path)
+
+            file: DynamicStorageFieldFile = node.file
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
             raise exceptions.NotFound(str(e))
         except SuspiciousFileOperation as e:

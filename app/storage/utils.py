@@ -2,13 +2,10 @@
 import typing
 from functools import partial
 
-from django.db import transaction
 from django.db.models import F, Value, TextField
 from django.db.models.functions import Concat
 from django_cte import With
 
-from storage.data_providers.exceptions import ProviderException
-from storage.data_providers.utils import get_data_provider
 from storage.models import Node, DataLibrary
 
 
@@ -27,7 +24,7 @@ def adapt_path(path: str) -> str:
     """
     path_list = filter(None, path.split('/'))
 
-    return '/'.join(['', *path_list])
+    return '/'.join(path_list)
 
 
 def _make_node_cte(cte, **params):
@@ -53,63 +50,52 @@ def _make_node_cte(cte, **params):
     )
 
 
-def get_node_by_path(
-        library: DataLibrary,
-        path: str,
-        last_node_type: typing.Optional[str] = None
-) -> Node:
-    """
-    Get node by path in root directory.
+def get_node_queryset(cte=None):
+    cte = cte or With.recursive(_make_node_cte)
 
-    :param library: DataLibrary of node
-    :param path: path relative to root directory ("/foo/bar.jpg")
-    :param last_node_type: optional, asserts last node (bar.jpg) has specified file_type
-    :return: Node in requested path
-
-    Raises:
-         Node.DoesNotExist if node is not found.
-    """
-    cte = With.recursive(partial(_make_node_cte, pk=library.root_dir_id))
-    path = adapt_path(path)
     node_cte_qs = (
         cte.join(Node.cte_objects.all(), pk=cte.col.pk)
         .with_cte(cte)
         .annotate(
             path=cte.col.path,
         )
-        .filter(path=path)
         .order_by('path')
     )
 
+    return node_cte_qs
+
+
+def get_node_by_path(
+        # todo: replace to library id? some kwargs?
+        library: DataLibrary,
+        path: str,
+        last_node_type: typing.Optional[str] = None
+) -> typing.Optional[Node]:
+    # todo:
+    #  typing.Optional[Node] -- maybe we should remove this option and always return Node
+    """
+    Get node by path in root directory.
+
+    :param library: DataLibrary of node
+    :param path: path relative to root directory ("/foo/bar.jpg")
+    :param last_node_type: optional, asserts last node (bar.jpg) has specified file_type
+    :return: Node in requested path, None if path is root directory
+
+    Raises:
+         Node.DoesNotExist if node is not found.
+    """
+    cte = With.recursive(partial(_make_node_cte, data_library=library))
+
+    # todo: remove adapt_path by modifying urls.py?
+    path = adapt_path(path)
+
+    if not path:
+        return None
+
+    node_cte_qs = get_node_queryset(cte=cte).filter(path=path)
     node = node_cte_qs.get()
 
     if last_node_type is not None and last_node_type != node.file_type:
         raise Node.DoesNotExist('Incorrect node type')
 
     return node
-
-
-def remove_node(library: DataLibrary, path: str):
-    """
-    Removes Node by its path.
-
-    :param library: DataLibrary, that contains Node
-    :param path: path in library
-    :return:
-    :exception Node.DoesNotExist -- can not get Node by path
-    :exception ProviderException -- can not remove Node
-    """
-    data_provider = get_data_provider(library=library)
-    current_node = get_node_by_path(library=library, path=path)
-
-    if current_node == library.root_dir:
-        raise ProviderException('Can not remove root directory')
-
-    if current_node.is_directory and current_node.get_children_count():
-        raise ProviderException(
-            f'Can not remove "{current_node.name}": is not empty'
-        )
-
-    with transaction.atomic():
-        current_node.delete()
-        data_provider.rm(path=path)

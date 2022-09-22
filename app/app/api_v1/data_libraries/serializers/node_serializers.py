@@ -1,15 +1,11 @@
 import mimetypes
-import os
 from operator import itemgetter
 
-from django.core.exceptions import SuspiciousFileOperation
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from rest_framework import serializers, exceptions
 
 from app.utils.models import get_field
-from storage.data_providers.exceptions import ProviderException
-from storage.data_providers.utils import get_data_provider
 
 from storage.models import Node, Mimetype
 from storage.utils import get_node_by_path
@@ -47,11 +43,9 @@ class NodeCreateSerializer(NodeSerializer):
             'file',
         ] + NodeSerializer.Meta.fields
 
-    @transaction.atomic
     def create(self, validated_data: dict):
         file: UploadedFile = validated_data['file']
         library, path = itemgetter('library', 'path')(self.context)
-        data_provider = get_data_provider(library=library)
 
         try:
             parent_node = get_node_by_path(
@@ -65,17 +59,20 @@ class NodeCreateSerializer(NodeSerializer):
 
         content_type, _ = mimetypes.guess_type(str(file))
         mimetype, _ = Mimetype.objects.get_or_create(name=content_type or 'application/octet-stream')
-        node = parent_node.add_child(
+        node = Node(
             name=file.name,
             file_type=Node.FileTypeChoices.FILE,
             size=file.size,
             mimetype=mimetype,
+            parent=parent_node,
+            file=file,
+            data_library=library,
         )
 
-        try:
-            data_provider.upload_file(path=path, uploaded_file=file)
-        except ProviderException as e:
-            raise exceptions.ValidationError(e)
+        if Node.objects.filter(name=node.name, parent=node.parent, data_library=node.data_library).exists():
+            raise exceptions.ValidationError(f'File with name {node.name} already exists', code='unique')
+
+        node.save()
 
         return node
 
@@ -157,21 +154,6 @@ class NodeRenameSerializer(serializers.ModelSerializer):
             'size',
         ]
 
-    @transaction.atomic
-    def update(self, instance: Node, validated_data):
-        library, path = itemgetter('library', 'path')(self.context)
-        name = validated_data['name']
-        data_provider = get_data_provider(library=library)
-
-        super().update(instance, validated_data)
-
-        try:
-            data_provider.rename(path=path, name=name)
-        except ProviderException as e:
-            raise exceptions.ValidationError(e)
-
-        return self.instance
-
 
 class MkDirectorySerializer(NodeSerializer):
     """Create directory node in library."""
@@ -185,27 +167,27 @@ class MkDirectorySerializer(NodeSerializer):
 
     @staticmethod
     def validate_name(name: str):
-        if name in ['.', '..']:
+        if name in ['.', '..'] or '/' in name:
             raise exceptions.ValidationError('This name is invalid')
         return name
 
     @transaction.atomic
     def create(self, validated_data):
         library, path, name = itemgetter('library', 'path', 'name')(validated_data)
-        data_provider = get_data_provider(library=library)
+        params = dict(
+            name=name,
+            file_type=Node.FileTypeChoices.DIRECTORY,
+            data_library=library,
+        )
 
         try:
             parent_node = get_node_by_path(library=library, path=path)
         except Node.DoesNotExist as e:
             raise exceptions.ParseError(str(e))
 
-        node = parent_node.add_child(name=name, file_type=Node.FileTypeChoices.DIRECTORY)
-        target_path = os.path.join(path, name)
-
-        try:
-            data_provider.mkdir(target_path=target_path)
-        except SuspiciousFileOperation:
-            # todo: logging.exception(e)
-            raise exceptions.ParseError('Something went wrong')
+        if parent_node is None:
+            node = Node.add_root(**params)
+        else:
+            node = parent_node.add_child(**params)
 
         return node

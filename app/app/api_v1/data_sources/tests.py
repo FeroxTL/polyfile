@@ -29,7 +29,7 @@ class DataSourceRegularUserTests(APITestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_data_source_update(self):
-        data_source = DataSourceFactory(data_provider_id=TestProvider.provider_id)
+        data_source = DataSourceFactory()
         url = reverse('api_v1:ds-detail', args=[data_source.pk])
         response = self.client.put(url, {})
         self.assertEqual(response.status_code, 403)

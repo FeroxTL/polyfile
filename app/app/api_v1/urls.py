@@ -20,6 +20,6 @@ urlpatterns = [
     path('lib/<uuid:lib_id>/rename<path:path>', dl_views.DataLibraryNodeRenameView.as_view(), name='lib-rename'),
     path('lib/<uuid:lib_id>/upload<path:path>', dl_views.NodeUploadFileView.as_view(), name='lib-upload'),
     path('lib/<uuid:lib_id>/mkdir<path:path>', dl_views.DataLibraryMkdirView.as_view(), name='lib-mkdir'),
-    path('lib/<uuid:lib_id>/rm<path:path>', dl_views.DataLibraryRmFileView.as_view(), name='lib-rm'),
+    path('lib/<uuid:lib_id>/rm<path:path>', dl_views.DataLibraryDeleteNodeView.as_view(), name='lib-rm'),
     path('lib/<uuid:lib_id>/download<path:path>', dl_views.DataLibraryDownloadView.as_view(), name='lib-download'),
 ]

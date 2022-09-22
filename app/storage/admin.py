@@ -4,9 +4,9 @@ from django.core.exceptions import ValidationError
 from django.forms import ModelForm, ChoiceField
 
 from storage.data_providers.base import provider_registry
-from storage.data_providers.utils import get_data_provider, get_data_provider_class
+from storage.data_providers.utils import get_data_provider_class
 from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype
-
+from storage.utils import get_node_queryset
 
 admin.site.register(Mimetype)
 
@@ -70,25 +70,18 @@ class DataSourceAdmin(admin.ModelAdmin):
     form = DataSourceAdminForm
     inlines = [DataSourceOptionAdmin]
 
-    def save_related(self, request, form, formsets, change):
-        super().save_related(request, form, formsets, change)
-        if not change:
-            library = DataLibrary(data_source=form.instance)
-            provider = get_data_provider(library)
-            provider.init_provider()
-
 
 @admin.register(DataLibrary)
 class DataLibraryAdmin(admin.ModelAdmin):
     readonly_fields = ['id']
     list_display = ['name', 'owner', 'data_source']
-    raw_id_fields = ['owner', 'root_dir']
+    raw_id_fields = ['owner']
     list_filter = ['data_source']
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if not change:
-            provider = get_data_provider(obj)
+            provider = obj.data_source.get_provider()
             provider.init_library()
 
 
@@ -104,3 +97,6 @@ class NodeAdmin(admin.ModelAdmin):
     @admin.display(description='Name')
     def name_str(self, instance):
         return instance.name or '<no name>'
+
+    def get_queryset(self, request):
+        return get_node_queryset().select_related('data_library')

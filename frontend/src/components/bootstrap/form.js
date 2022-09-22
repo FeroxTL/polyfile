@@ -148,7 +148,7 @@ const FormAutoField = {
 
     if (fieldAttrs.readOnly || ["nested object"].indexOf(fieldAttrs.type) !== -1) return null;
     if (fieldAttrs.type === "checkbox") return m(FormCheckbox, vnode.attrs);
-    if (["string", "text"].indexOf(fieldAttrs.type) !== -1) return m(FormInput, vnode.attrs);
+    if (["string", "text", "url"].indexOf(fieldAttrs.type) !== -1) return m(FormInput, vnode.attrs);
     if (fieldAttrs.type === "integer") return m(FormInput, vnode.attrs);
     if (fieldAttrs.type === "choice") return m(FormSelect, vnode.attrs);
 

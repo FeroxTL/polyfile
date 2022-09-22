@@ -124,6 +124,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
 STATICFILES_DIRS = (
     PROJECT_DIR / 'static',
     BASE_DIR / 'web_dev_assets',
