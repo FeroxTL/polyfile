@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
             name='Node',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(blank=True, db_index=True, max_length=255, verbose_name='Name')),
+                ('name', models.CharField(blank=False, db_index=True, max_length=255, verbose_name='Name')),
                 ('file', storage.fields.DynamicStorageFileField(upload_to='')),
                 ('size', models.PositiveIntegerField(default=0, help_text='Size in bytes', verbose_name='Size')),
                 ('file_type', models.CharField(choices=[('directory', 'Directory'), ('file', 'File')], db_index=True, max_length=16, verbose_name='Node type')),

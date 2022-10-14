@@ -1,16 +1,16 @@
 # .coveragerc to control coverage.py
 [run]
 branch = True
-data_file = app/local/.coverage
+data_file = polyfile/local/.coverage
 source =
-    ./app/
+    ./polyfile/
 
 omit =
     */factories.py
     */migrations/*
-    app/manage.py
-    app/app/asgi.py
-    app/app/wsgi.py
+    polyfile/manage.py
+    polyfile/app/asgi.py
+    polyfile/app/wsgi.py
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -37,4 +37,4 @@ show_missing = True
 ignore_errors = True
 
 [html]
-directory = app/local/htmlcov
+directory = polyfile/local/htmlcov

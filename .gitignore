@@ -146,5 +146,5 @@ node_modules
 # project
 webpack-stats.json
 collected_static
-app/web_dev_assets
-app/local
+polyfile/web_dev_assets
+polyfile/local

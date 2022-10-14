@@ -119,7 +119,7 @@ class Node(models.Model):
         verbose_name='Name',
         max_length=255,
         db_index=True,
-        blank=True, null=False,
+        blank=False, null=False,
     )
     file = DynamicStorageFileField(
         upload_to=DynamicStorageFileField.default_upload_to,  # required for django migrations

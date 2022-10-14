@@ -101,6 +101,7 @@ class NodeMoveSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance: Node, validated_data):
+        # todo
         library, source_path = itemgetter('library', 'path')(self.context)
         target_path = validated_data['target_path']
         # data_provider = get_data_provider(data_source=library.data_source)

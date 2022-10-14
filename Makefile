@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-manage = "./app/manage.py"
+manage = "./polyfile/manage.py"
 current_dir = $(shell pwd)
 
 clean:
@@ -7,15 +7,15 @@ clean:
 
 
 test:
-	@python3 $(manage) test ./app --noinput --failfast
+	@python3 $(manage) test ./polyfile --noinput --failfast
 
 
 coverage:
-	@coverage run --source='app' $(manage) test ./app --noinput --failfast
+	@coverage run --source='polyfile' $(manage) test ./polyfile --noinput --failfast
 	@coverage html --skip-covered
 	@echo
 	@echo
-	@echo "Coverage:" "file://"$(current_dir)"/app/local/htmlcov/index.html"
+	@echo "Coverage:" "file://"$(current_dir)"/polyfile/local/htmlcov/index.html"
 
 
 run:
