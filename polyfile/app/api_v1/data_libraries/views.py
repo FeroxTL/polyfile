@@ -181,6 +181,7 @@ class DataLibraryMkdirView(generics.CreateAPIView):
     """Create directory in library."""
     serializer_class = node_serializers.MkDirectorySerializer
     permission_classes = [permissions.IsAuthenticated]
+    queryset = Node.objects.none()
     lookup_url_kwarg = 'lib_id'
 
     def get_library(self, lib_id: UUID) -> DataLibrary:

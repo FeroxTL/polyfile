@@ -6,9 +6,10 @@ from django.db import transaction
 from rest_framework import serializers, exceptions
 
 from app.utils.models import get_field
+from storage.exceptions import AlreadyExistsError
 
 from storage.models import Node, Mimetype
-from storage.utils import get_node_by_path
+from storage.utils import get_node_by_path, adapt_path
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -186,9 +187,13 @@ class MkDirectorySerializer(NodeSerializer):
         except Node.DoesNotExist as e:
             raise exceptions.ParseError(str(e))
 
-        if parent_node is None:
-            node = Node.add_root(**params)
-        else:
-            node = parent_node.add_child(**params)
+        try:
+            if parent_node is None:
+                node = Node.add_root(**params)
+            else:
+                node = parent_node.add_child(**params)
+        except AlreadyExistsError:
+            # todo: one style exceptions
+            raise exceptions.ValidationError([f'File "{adapt_path(path)}/{name}" already exists'])
 
         return node

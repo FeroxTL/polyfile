@@ -8,6 +8,7 @@ from django_cte import CTEManager
 
 from storage.data_providers.base import BaseProvider
 from storage.data_providers.utils import get_data_provider_class
+from storage.exceptions import AlreadyExistsError
 from storage.fields import DynamicStorageFileField
 
 
@@ -195,10 +196,16 @@ class Node(models.Model):
 
     @classmethod
     def add_root(cls, **kwargs):
-        return cls.objects.create(parent=None, **kwargs)
+        instance, created = cls.objects.get_or_create(parent=None, **kwargs)
+        if not created:
+            raise AlreadyExistsError
+        return instance
 
     def add_child(self, **kwargs):
-        return Node.objects.create(parent=self, **kwargs)
+        instance, created = Node.objects.get_or_create(parent=self, **kwargs)
+        if not created:
+            raise AlreadyExistsError
+        return instance
 
     def get_children(self):
         return Node.objects.filter(parent=self)

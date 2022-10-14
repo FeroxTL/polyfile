@@ -49,7 +49,6 @@ class S3StorageProvider(BaseProvider):
         bucket_name = self._get_user_bucket_name(library.pk)
 
         if not self._is_bucket_exists(bucket_name):
-            # todo: logger.warning
             self.storage.connection.create_bucket(Bucket=bucket_name)
 
     @staticmethod

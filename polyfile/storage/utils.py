@@ -15,9 +15,12 @@ def adapt_path(path: str) -> str:
 
     "" -> ""
     "/" -> ""
-    "/foo/" -> "/foo"
-    "foo/" -> "/foo"
-    "/foo/bar.jpg" -> "/foo/bar.jpg"
+    "/foo/" -> "foo"
+    "foo/" -> "foo"
+    "foo/bar" -> "foo/bar"
+    "/foo/bar" -> "foo/bar"
+    "/foo/bar/" -> "foo/bar"
+    "/foo/bar.jpg" -> "foo/bar.jpg"
 
     :param path: input path
     :return: filtered path with slashes only between elements

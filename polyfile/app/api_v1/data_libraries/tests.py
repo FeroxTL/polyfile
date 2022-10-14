@@ -200,6 +200,14 @@ class NodeTests(APITestCase):
             'has_preview': False,
         })
 
+        # mkdir with the same name
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertListEqual(response.json(), [
+            f'File "/{data["name"]}" already exists',
+        ])
+
         # mkdir with invalid name
         data = {'name': '..'}
         response = self.client.post(url, data, format='json')
