@@ -4,7 +4,7 @@ const BundleTracker = require('webpack-bundle-tracker');
 
 
 const rootDir = path.resolve(__dirname, '..');
-const mainAppDir = path.resolve(rootDir, '..', 'app');
+const mainAppDir = path.resolve(rootDir, '..', 'polyfile');
 const bundlesDir = path.resolve(mainAppDir, 'web_dev_assets', 'bundles');
 const srcDir = path.resolve(rootDir, 'src');
 

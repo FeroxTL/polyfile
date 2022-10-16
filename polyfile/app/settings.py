@@ -34,6 +34,10 @@ INSTALLED_APPS = [
 
     'accounts',
     'storage',
+
+    # Registered storages
+    'contrib.storages.filesystem_storage',
+    'contrib.storages.s3_storage',
 ]
 
 MIDDLEWARE = [

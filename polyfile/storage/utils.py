@@ -6,6 +6,9 @@ from django.db.models import F, Value, TextField
 from django.db.models.functions import Concat
 from django_cte import With
 
+if not typing.TYPE_CHECKING:
+    pass
+
 from storage.models import Node, DataLibrary
 
 

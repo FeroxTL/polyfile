@@ -2,7 +2,6 @@
 import typing
 from uuid import UUID
 
-from django.core.exceptions import SuspiciousFileOperation
 from django.db import transaction, models
 from django.db.models import Case, When
 from django.http import Http404, FileResponse
@@ -198,9 +197,6 @@ class DataLibraryDeleteNodeView(generics.DestroyAPIView):
     lookup_url_kwarg = 'lib_id'
     queryset = Node.objects.none()
 
-    def get_library(self, lib_id: UUID) -> DataLibrary:
-        return DataLibrary.objects.get(owner=self.request.user, id=lib_id)
-
     def get_object(self):
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
@@ -249,13 +245,14 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
             file: DynamicStorageFieldFile = node.file
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
             raise exceptions.NotFound(str(e))
-        except SuspiciousFileOperation as e:
-            raise exceptions.ParseError(str(e))
 
         content_type = node.mimetype and node.mimetype.name or 'application/octet-stream'
-        response = FileResponse(
-            file.open('rb'),
-            content_type=content_type,
-            headers={'Last-Modified': http_date(node.updated_at.timestamp())}
-        )
-        return response
+
+        try:
+            return FileResponse(
+                file.open('rb'),  # todo: use sendfile, that is really slow
+                content_type=content_type,
+                headers={'Last-Modified': http_date(node.updated_at.timestamp())}
+            )
+        except ValueError:  # file.open failed
+            raise exceptions.APIException()

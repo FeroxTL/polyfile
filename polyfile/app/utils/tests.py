@@ -3,9 +3,11 @@ from functools import wraps
 from pathlib import Path
 
 from django.core.files.storage import Storage, FileSystemStorage
+from django.test import TestCase
 from rest_framework.fields import DateTimeField
 
-from storage.data_providers.base import BaseProvider, provider_registry
+from accounts.factories import SuperuserFactory
+from storage.base_data_provider import BaseProvider, provider_registry
 
 
 def drf_dt(dt) -> str:
@@ -31,3 +33,29 @@ class TestProvider(BaseProvider):
 
 
 provider_registry.register(TestProvider)
+
+
+class AdminTestCase(TestCase):
+    def setUp(self) -> None:
+        self.user = SuperuserFactory()
+        self.client.force_login(self.user)
+
+    @staticmethod
+    def get_options(options: dict, delete_list_keys: list = None):
+        result_options = {}
+        delete_list_keys = delete_list_keys or []
+
+        for i, key in enumerate(options.keys()):
+            result_options[f'options-{i}-key'] = key
+            result_options[f'options-{i}-value'] = options[key]
+            if key in delete_list_keys:
+                result_options[f'options-{i}-DELETE'] = 1
+
+        result = {
+            'options-TOTAL_FORMS': len(options),
+            'options-INITIAL_FORMS': 0,
+            'options-MIN_NUM_FORMS': 0,
+            'id_options-MAX_NUM_FORMS': 1000,
+            **result_options
+        }
+        return result

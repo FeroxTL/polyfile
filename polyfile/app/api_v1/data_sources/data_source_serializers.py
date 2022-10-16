@@ -2,7 +2,7 @@ from django.db import transaction, models
 from rest_framework import serializers
 
 from app.utils.models import get_field
-from storage.data_providers.base import provider_registry
+from storage.base_data_provider import provider_registry
 from storage.models import DataSource, DataSourceOption
 
 

@@ -52,15 +52,9 @@ class FileFactory(DjangoModelFactory):
         parent: typing.Optional[Node] = kwargs.pop('parent', None)
         if parent is not None:
             kwargs.setdefault('data_library', parent.data_library)
-            # todo: we have removed django-treebeard
-            # https://django-treebeard.readthedocs.io/en/latest/caveats.html
-            # django-treebeard uses Django raw SQL queries for some write operations, and raw queries don’t
-            # update the objects in the ORM since it’s being bypassed.
-            parent.refresh_from_db()
+            return Node.objects.create(parent=parent, **kwargs)
 
-            return parent.add_child(**kwargs)
-
-        return Node.add_root(**kwargs)
+        return Node.objects.create(**kwargs)
 
 
 class DirectoryFactory(FileFactory):

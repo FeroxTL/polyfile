@@ -6,10 +6,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django_cte import CTEManager
 
-from storage.data_providers.base import BaseProvider
-from storage.data_providers.utils import get_data_provider_class
-from storage.exceptions import AlreadyExistsError
+from storage.base_data_provider import BaseProvider, provider_registry
 from storage.fields import DynamicStorageFileField
+
+
+def get_data_provider_class(data_provider_id) -> typing.Type[BaseProvider]:
+    return provider_registry.get_provider(data_provider_id)
 
 
 class DataSource(models.Model):
@@ -18,7 +20,7 @@ class DataSource(models.Model):
 
     Only admins can set up this.
     """
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     name = models.CharField(
         verbose_name='Data source name',
         max_length=255,
@@ -49,7 +51,7 @@ class DataSource(models.Model):
 
 
 class DataSourceOption(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     key = models.CharField(max_length=64)
     value = models.CharField(max_length=512)
     data_source = models.ForeignKey(
@@ -116,6 +118,7 @@ class Mimetype(models.Model):
 
 class Node(models.Model):
     """File or directory."""
+    id = models.BigAutoField(primary_key=True)
     name = models.CharField(
         verbose_name='Name',
         max_length=255,
@@ -193,19 +196,6 @@ class Node(models.Model):
     @property
     def is_directory(self):
         return self.file_type == self.FileTypeChoices.DIRECTORY
-
-    @classmethod
-    def add_root(cls, **kwargs):
-        instance, created = cls.objects.get_or_create(parent=None, **kwargs)
-        if not created:
-            raise AlreadyExistsError
-        return instance
-
-    def add_child(self, **kwargs):
-        instance, created = Node.objects.get_or_create(parent=self, **kwargs)
-        if not created:
-            raise AlreadyExistsError
-        return instance
 
     def get_children(self):
         return Node.objects.filter(parent=self)

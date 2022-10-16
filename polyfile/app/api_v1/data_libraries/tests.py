@@ -1,16 +1,15 @@
 import tempfile
 import uuid
 from pathlib import Path
-from unittest import mock, skip
 
 from PIL import Image
+from django.core.files.uploadedfile import UploadedFile
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.factories import UserFactory
 from app.utils.tests import with_tempdir
-from storage.data_providers.exceptions import ProviderException
 from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory
 from storage.models import DataLibrary, Node
 
@@ -32,6 +31,11 @@ class LibraryTests(APITestCase):
         data_library = DataLibrary.objects.get()
         self.assertEqual(data_library.name, 'FooBar')
 
+        # anonymous create library
+        self.client.logout()
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+
     def test_list_libraries(self):
         """Ensure we can list our libraries."""
         # another user's library
@@ -47,6 +51,11 @@ class LibraryTests(APITestCase):
             'id': str(data_library.pk),
             'name': data_library.name,
         }])
+
+        # anonymous list directories
+        self.client.logout()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     def test_update_library(self):
         """Ensure we can update our libraries."""
@@ -68,6 +77,11 @@ class LibraryTests(APITestCase):
         # patch request
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        # anonymous update
+        self.client.logout()
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
 
 class NodeTests(APITestCase):
@@ -98,13 +112,13 @@ class NodeTests(APITestCase):
         }
 
     @staticmethod
-    def to_json_node(current_node: Node, child_nodes=None):
+    def to_json_node(current_node: Node, child_nodes=None):  # noqa
         if child_nodes is None:
             child_nodes = current_node.get_children()
 
         return {
             'current_node': {
-                'file_type': current_node.file_type,
+                'file_type': str(current_node.file_type),
                 'size': current_node.size,
                 'name': current_node.name,
                 'mimetype': current_node.mimetype and current_node.mimetype.name,
@@ -124,28 +138,44 @@ class NodeTests(APITestCase):
             } for child in child_nodes]
         }
 
-    def test_list_nodes(self):
+    @with_tempdir
+    def test_list_nodes(self, temp_dir):
         """Ensure we can list our nodes."""
-        data_library = DataLibraryFactory(owner=self.user)
-        url = reverse('api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        directory_1 = DirectoryFactory(data_library=data_library)
+        library_url = reverse('api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
+        directory_url = reverse(
+            'api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': f'/{directory_1.name}'})
 
-        response = self.client.get(url)
+        # list root
+        response = self.client.get(library_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertDictEqual(response.json(), self.to_json_root(data_library))
 
+        # list directory
+        response = self.client.get(directory_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertDictEqual(response.json(), self.to_json_node(directory_1))
+
         # directory does not exist
         data_library = DataLibraryFactory(owner=self.user)
-        url = reverse('api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': '/dost-not-exists/'})
+        library_url_dne = reverse(
+            'api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': '/dost-not-exists/'})
 
-        response = self.client.get(url)
+        response = self.client.get(library_url_dne)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
 
         # not our data library
-        data_library = DataLibraryFactory()
-        url = reverse('api_v1:lib-files', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
+        data_library2 = DataLibraryFactory()
+        library_url2 = reverse('api_v1:lib-files', kwargs={'lib_id': str(data_library2.pk), 'path': '/'})
 
-        response = self.client.get(url)
+        response = self.client.get(library_url2)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
+
+        # anonymous get library
+        self.client.logout()
+        response = self.client.get(library_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     @with_tempdir
     def test_list_file_node(self, temp_dir):
@@ -157,6 +187,11 @@ class NodeTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertDictEqual(response.json(), self.to_json_node(current_node=file, child_nodes=[file]))
+
+        # anonymous list node
+        self.client.logout()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     @with_tempdir
     def test_rename_node(self, temp_dir):
@@ -181,6 +216,11 @@ class NodeTests(APITestCase):
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
 
+        # anonymous rename
+        self.client.logout()
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+
     @with_tempdir
     def test_mkdir(self, temp_dir):
         """Ensure we can create directories."""
@@ -190,7 +230,21 @@ class NodeTests(APITestCase):
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-        directory = Node.objects.get(parent__isnull=True, data_library=data_library)
+        directory = Node.objects.get(parent__isnull=True, data_library=data_library, name=data['name'])
+        self.assertTrue(directory.pk)
+        self.assertDictEqual(response.json(), {
+            'file_type': Node.FileTypeChoices.DIRECTORY.value,
+            'size': 0,
+            'mimetype': None,
+            'name': data['name'],
+            'has_preview': False,
+        })
+
+        # nested mkdir
+        nested_url = reverse('api_v1:lib-mkdir', kwargs={'lib_id': str(data_library.pk), 'path': f'/{data["name"]}'})
+        response = self.client.post(nested_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        directory = Node.objects.get(parent__isnull=False, data_library=data_library, name=data['name'])
         self.assertTrue(directory.pk)
         self.assertDictEqual(response.json(), {
             'file_type': Node.FileTypeChoices.DIRECTORY.value,
@@ -201,7 +255,6 @@ class NodeTests(APITestCase):
         })
 
         # mkdir with the same name
-
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertListEqual(response.json(), [
@@ -220,6 +273,11 @@ class NodeTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
+
+        # anonymous mkdir
+        self.client.logout()
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     @with_tempdir
     def test_rm(self, temp_dir):
@@ -260,6 +318,11 @@ class NodeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertDictEqual(response.json(), {'detail': f'Can not remove "{directory.name}": is not empty'})
 
+        # anonymous rm
+        self.client.logout()
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+
     @with_tempdir
     def test_file_upload(self, temp_dir):
         data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
@@ -281,96 +344,85 @@ class NodeTests(APITestCase):
                 'has_preview': False
             })
 
+            # File already exists
+            tmp_file.seek(0)
+            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+            self.assertListEqual(response.json(), [
+                f'File with name {Path(tmp_file.name).name} already exists',
+            ])
+
         # library does not exist
-        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(uuid.uuid4()), 'path': '/'})
+        url_lib_dne = reverse('api_v1:lib-upload', kwargs={'lib_id': str(uuid.uuid4()), 'path': '/'})
         with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
             image.save(tmp_file)
-            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            response = self.client.post(url_lib_dne, {'file': tmp_file}, format='multipart')
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code, response.data)
             self.assertDictEqual(response.json(), {'detail': 'DataLibrary matching query does not exist.'})
 
         # path does not exist
-        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist/'})
-
+        url_path_dne = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist/'})
         with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
             image.save(tmp_file)
             tmp_file.seek(0)
-            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            response = self.client.post(url_path_dne, {'file': tmp_file}, format='multipart')
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
             self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
 
         # target path is not directory
         target_node = FileFactory(data_library=data_library)
-        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': f'/{target_node.name}'})
+        url_nad = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': f'/{target_node.name}'})
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
+            image.save(tmp_file)
+            tmp_file.seek(0)
+            response = self.client.post(url_nad, {'file': tmp_file}, format='multipart')
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+            self.assertDictEqual(response.json(), {'detail': 'Incorrect node type'})
+
+        # anonymous file upload
+        self.client.logout()
         with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
             image.save(tmp_file)
             tmp_file.seek(0)
             response = self.client.post(url, {'file': tmp_file}, format='multipart')
-            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
-            self.assertDictEqual(response.json(), {'detail': 'Incorrect node type'})
+            self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code, response.data)
 
+    @with_tempdir
+    def test_file_download(self, temp_dir):
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        with tempfile.NamedTemporaryFile(suffix='.txt') as temp_file:
+            temp_file.write(b'foobar')
+            temp_file.seek(0)
+            file_node = FileFactory(
+                data_library=data_library,
+                file=UploadedFile(temp_file),
+                mimetype__name='text/plain',
+            )
 
-# todo: incorrect test
-@skip('Remove when DataProviders will be removed')
-class ProviderTests(APITestCase):
-    """Testing api and provider integration -- errors and exceptions."""
+        url = reverse('api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers['Content-Type'], 'text/plain')
+        self.assertEqual(response.headers['Content-Disposition'], f'inline; filename="{Path(temp_file.name).name}"')
+        self.assertEqual(response.getvalue(), b'foobar')
 
-    def setUp(self) -> None:
-        self.user = UserFactory()
-        self.client.force_login(self.user)
+        # download deleted file
+        file_node_no_file = FileFactory(
+            data_library=data_library,
+            mimetype__name='text/plain',
+        )
+        no_file_url = reverse(
+            'api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node_no_file.name}'})
+        response = self.client.get(no_file_url)
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.json(), {'detail': 'A server error occurred.'})
 
-    def test_mkdir(self):
-        """Test provider exceptions while creating directories."""
-        data_library = DataLibraryFactory(owner=self.user)
-        url = reverse('api_v1:lib-mkdir', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
-        data = {'name': 'FooBar'}
-        with mock.patch('app.utils.tests.TestProvider.mkdir') as p:
-            p.side_effect = ProviderException('Something went wrong')
-            response = self.client.post(url, data, format='json')
-            p.assert_called()
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
+        # Node does not exists
+        url_dne = reverse('api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist'})
+        response = self.client.get(url_dne)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_rm(self):
-        """Test provider exceptions on file removal."""
-        data_library = DataLibraryFactory(owner=self.user)
-        directory = DirectoryFactory(parent=data_library.root_dir)
-        url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/' + directory.name + '/'})
-        with mock.patch('app.utils.tests.TestProvider.rm') as p:
-            p.side_effect = ProviderException('Something went wrong')
-            response = self.client.delete(url)
-            p.assert_called()
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
-
-    def test_rename_node(self):
-        """Test provider exceptions on rename node."""
-        data_library = DataLibraryFactory(owner=self.user)
-        file = FileFactory(parent=data_library.root_dir)
-        url = reverse('api_v1:lib-rename', kwargs={'lib_id': str(data_library.pk), 'path': '/' + file.name})
-        data = {'name': 'FooBar'}
-
-        with mock.patch('app.utils.tests.TestProvider.rename') as p:
-            p.side_effect = ProviderException('Something went wrong')
-            response = self.client.put(url, data, format='json')
-            p.assert_called()
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        # todo: make errors in single style
-        # self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
-
-    def test_file_upload(self):
-        data_library = DataLibraryFactory(owner=self.user)
-        url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
-        image = Image.new('RGB', (100, 100))
-
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            image.save(tmp_file)
-            tmp_file.seek(0)
-            with mock.patch('app.utils.tests.TestProvider.upload_file') as p:
-                p.side_effect = ProviderException('Something went wrong')
-                response = self.client.post(url, {'file': tmp_file}, format='multipart')
-                p.assert_called()
-            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
-            # todo: make errors in single style
-            # self.assertDictEqual(response.json(), {'detail': 'Something went wrong'})
+        # anonymous file get
+        self.client.logout()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

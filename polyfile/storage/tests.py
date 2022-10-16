@@ -1,20 +1,16 @@
-import tempfile
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from unittest import mock, skip
+from unittest import mock
 
-from django.core.exceptions import SuspiciousFileOperation, ValidationError
+from django.core.exceptions import ValidationError
+from django.core.files.temp import NamedTemporaryFile
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
 from accounts.factories import SuperuserFactory
-from app.utils.tests import TestProvider, with_tempdir
-from storage.data_providers.exceptions import ProviderException
-from storage.data_providers.file_storage import FileSystemStorageProvider
+from app.utils.tests import TestProvider, with_tempdir, AdminTestCase
 from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory
 from storage.models import Node, DataSource
-from storage.utils import get_node_by_path
+from storage.utils import get_node_by_path, get_node_queryset
 
 
 class StorageTests(TestCase):
@@ -57,217 +53,7 @@ class StorageTests(TestCase):
             get_node_by_path(data_library, '/does-not-exist/')
 
 
-@skip('Try again later')  # todo
-class FileSystemStorageProviderTests(TestCase):
-    """FileStorage tests."""
-    def test_init_storage(self):
-        with TemporaryDirectory() as f:
-            data_source = DataSourceFactory(
-                data_provider_id=FileSystemStorageProvider.provider_id,
-                options={'root_directory': f},
-            )
-            library = DataLibraryFactory(data_source=data_source)
-
-            provider = data_source.get_provider()
-
-            self.assertTrue(isinstance(provider, FileSystemStorageProvider))
-            self.assertEqual(provider.provider_id, FileSystemStorageProvider.provider_id)
-            self.assertTrue((Path(f) / 'data').exists())
-
-            # users library
-            provider.init_library()
-            self.assertTrue((Path(f) / 'data' / str(library.pk) / 'files').exists())
-
-    def test_invalid_options(self):
-        """Ensure FileSystemStorageProvider correctly validates its options."""
-        with TemporaryDirectory() as f:
-            data_source = DataSourceFactory(
-                data_provider_id=FileSystemStorageProvider.provider_id,
-                options={'root_directory': f},
-            )
-            not_existent_path = Path(f) / 'does-not-exist'
-
-            provider = data_source.get_provider()
-            provider.validate_options(data_source.options_dict)
-
-            # directory does not exist
-            with self.assertRaises(ValidationError) as e:
-                provider.validate_options({'root_directory': not_existent_path})
-
-            self.assertDictEqual(e.exception.message_dict, {
-                'root_directory': [f'"{not_existent_path}" is not directory or does not exist']
-            })
-
-            # directory is not provided
-            with self.assertRaises(ValidationError) as e:
-                provider.validate_options({})
-
-            self.assertDictEqual(e.exception.message_dict, {
-                'root_directory': ['This field is required.']
-            })
-
-    def test_file_upload(self):
-        """Ensure we can upload files to storage."""
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file, TemporaryDirectory() as f:
-            tmp_file.write(b'foobar')
-            provider = FileSystemStorageProvider(options={'root_directory': f})
-            provider.init_library()
-
-            name = provider.upload_file(path='/', uploaded_file=UploadedFile(tmp_file))
-            self.assertEqual(name, Path(tmp_file.name).name)
-            filepath = Path(f, 'data', str(provider.library.pk), 'files', name)
-            self.assertTrue(filepath.exists())
-            self.assertEqual(filepath.read_bytes(), b'foobar')
-
-            # upload with same name
-            with self.assertRaises(ProviderException):
-                provider.upload_file(path='/', uploaded_file=UploadedFile(tmp_file))
-
-    def test_mkdir(self):
-        """Ensure we can make directories in storage."""
-        with TemporaryDirectory() as f:
-            provider = FileSystemStorageProvider(options={'root_directory': f})
-            dir_name = 'FooBar'
-            provider.init_library()
-
-            # mkdir
-            realpath = provider.mkdir(target_path=f'/{dir_name}')
-            self.assertEqual(realpath, Path(f) / 'data' / str(provider.library.pk) / 'files' / dir_name)
-            self.assertTrue(realpath.exists())
-
-            # suspicious mkdir
-            with self.assertRaises(SuspiciousFileOperation):
-                provider.mkdir(target_path='/../foobar/')
-
-            # relative path
-            dir_name2 = 'FooBar2'
-            realpath = provider.mkdir(target_path=f'{dir_name}/{dir_name2}')
-            self.assertEqual(realpath, Path(f) / 'data' / str(provider.library.pk) / 'files' / dir_name / dir_name2)
-            self.assertTrue(realpath.exists())
-
-            # directory already exists
-            with self.assertRaises(ProviderException) as e:
-                provider.mkdir(target_path=f'{dir_name}/{dir_name2}')
-            self.assertEqual(str(e.exception), 'directory already exists')
-
-    def test_rm(self):
-        """Ensure we can remove nodes in storage."""
-        with TemporaryDirectory() as f:
-            provider = FileSystemStorageProvider(options={'root_directory': f})
-            dir_name = 'FooBar'
-            provider.init_library()
-            root_path = Path(f) / 'data' / str(provider.library.pk) / 'files'
-
-            # rmdir
-            realpath = root_path / dir_name
-            realpath.mkdir()
-            provider.rm(path=f'/{dir_name}/')
-            self.assertFalse(realpath.exists())
-
-            # rmdir relative path
-            realpath = root_path / dir_name
-            realpath.mkdir()
-            provider.rm(path=f'{dir_name}/')
-            self.assertFalse(realpath.exists())
-
-            # rm file
-            realpath = root_path / dir_name
-            realpath.touch()
-            provider.rm(path=f'{dir_name}/')
-            self.assertFalse(realpath.exists())
-
-            # rmdir root directory
-            with self.assertRaises(ProviderException):
-                provider.rm(path='/')
-            with self.assertRaises(ProviderException):
-                provider.rm(path='')
-
-            # rm directory that does not exist (that is ok)
-            provider.rm(path='/does-not-exist/')
-
-    def test_rename(self):
-        """Ensure we can rename files/directories in storage."""
-        with TemporaryDirectory() as f:
-            provider = FileSystemStorageProvider(options={'root_directory': f})
-            dir_name = 'FooBar'
-            provider.init_library()
-            root_path = Path(f) / 'data' / str(provider.library.pk) / 'files'
-
-            # rename directory
-            realpath = root_path / dir_name
-            realpath.mkdir()
-            new_dir_name = 'BarBaz'
-            provider.rename(path=f'/{dir_name}/', name=new_dir_name)
-            self.assertFalse(realpath.exists())
-            realpath = root_path / new_dir_name
-            self.assertTrue(realpath.exists())
-            realpath.rmdir()
-
-            # rename root directory
-            with self.assertRaises(SuspiciousFileOperation):
-                provider.rename(path='/', name=new_dir_name)
-
-            with self.assertRaises(SuspiciousFileOperation):
-                provider.rename(path='/../', name=new_dir_name)
-
-            # Rename relative path
-            realpath = root_path / dir_name
-            realpath.mkdir()
-            new_dir_name = 'BarBaz'
-            provider.rename(path=f'{dir_name}/', name=new_dir_name)
-            self.assertFalse(realpath.exists())
-            realpath = root_path / new_dir_name
-            self.assertTrue(realpath.exists())
-            realpath.rmdir()
-
-            # rename, but already exists
-            realpath = root_path / dir_name
-            realpath.mkdir()
-            new_path = root_path / 'BarBaz'
-            new_path.mkdir()
-            with self.assertRaises(SuspiciousFileOperation):
-                provider.rename(path=str(dir_name), name=new_path.name)
-
-            realpath.rmdir()
-            new_path.rmdir()
-
-            # Rename to something strange
-            realpath = root_path / dir_name
-            realpath.mkdir()
-            foo_dir = root_path / 'foo'
-            foo_dir.mkdir()
-
-            new_dir_name = 'foo/BarBaz'
-
-            with self.assertRaises(SuspiciousFileOperation):
-                provider.rename(path=str(dir_name), name=new_dir_name)
-
-
-class DataSourceAdminTest(TestCase):
-    def setUp(self) -> None:
-        self.user = SuperuserFactory()
-        self.client.force_login(self.user)
-
-    @staticmethod
-    def get_options(options: dict, delete_list_keys: list = None):
-        result_options = {}
-        delete_list_keys = delete_list_keys or []
-
-        for i, key in enumerate(options.keys()):
-            result_options[f'options-{i}-key'] = key
-            result_options[f'options-{i}-value'] = options[key]
-            if key in delete_list_keys:
-                result_options[f'options-{i}-DELETE'] = 1
-
-        result = {
-            'options-TOTAL_FORMS': len(options),
-            'options-INITIAL_FORMS': 0,
-            'options-MIN_NUM_FORMS': 0,
-            'id_options-MAX_NUM_FORMS': 1000,
-            **result_options
-        }
-        return result
-
+class DataSourceAdminTest(AdminTestCase):
     def test_datasource_create(self):
         """Ensure we can create DataSource."""
         url = reverse('admin:storage_datasource_add')
@@ -394,3 +180,59 @@ class DataLibraryAdminTest(TestCase):
             response = self.client.post(url, data)
             self.assertEqual(response.status_code, 302)
             init_library.assert_not_called()
+
+
+class NodeAdminTest(AdminTestCase):
+    @with_tempdir
+    def test_list_node(self, temp_dir):
+        """Ensure we can list Nodes."""
+        url = reverse('admin:storage_node_changelist')
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir})
+        directory = DirectoryFactory(data_library=data_library)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(directory.name.encode('utf-8') in response.content)
+
+    @with_tempdir
+    def test_change_widget(self, temp_dir):
+        """Ensure url in admin widget is correct."""
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir}, owner=self.user)
+        with NamedTemporaryFile() as tmp_file:
+            file_node = FileFactory(data_library=data_library, file=UploadedFile(tmp_file))
+        url = reverse('admin:storage_node_change', args=[file_node.pk])
+        response = self.client.get(url)
+        file_node = get_node_queryset().get(pk=file_node.pk)
+        self.assertTrue(file_node.file.url().encode('utf-8') in response.content)
+
+        file_response = self.client.get(file_node.file.url())
+        self.assertEqual(file_response.status_code, 200)
+
+    @with_tempdir
+    def test_node_create(self, temp_dir):
+        """Ensure we can create node."""
+        url = reverse('admin:storage_node_add')
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir})
+        directory = DirectoryFactory(data_library=data_library)
+
+        # invalid data
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(response.context['adminform'].errors.keys()),
+            {'name', 'size', 'data_library', 'file_type', 'parent'}
+        )
+
+        # valid data
+        response = self.client.post(url, data={
+            'name': 'foo',
+            'size': 0,
+            'data_library': data_library.pk,
+            'file_type': Node.FileTypeChoices.DIRECTORY,
+            'parent': directory.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        qs = Node.objects.filter(name='foo')
+        self.assertTrue(qs.exists())
+        node = qs.get()
+        self.assertEqual(node.parent, directory)
+        self.assertEqual(node.data_library, data_library)

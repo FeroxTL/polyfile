@@ -2,7 +2,7 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from storage.data_providers.base import provider_registry
+from storage.base_data_provider import provider_registry
 
 
 class DataProviderList(APIView):

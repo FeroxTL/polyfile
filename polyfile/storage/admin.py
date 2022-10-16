@@ -3,9 +3,8 @@ from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm, ChoiceField
 
-from storage.data_providers.base import provider_registry
-from storage.data_providers.utils import get_data_provider_class
-from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype
+from storage.base_data_provider import provider_registry
+from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype, get_data_provider_class
 from storage.utils import get_node_queryset
 
 admin.site.register(Mimetype)
@@ -82,21 +81,17 @@ class DataLibraryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if not change:
             provider = obj.data_source.get_provider()
-            provider.init_library()
+            provider.init_library(library=obj)
 
 
 @admin.register(Node)
 class NodeAdmin(admin.ModelAdmin):
     raw_id_fields = ['parent']
-    list_display = ['name_str', 'file_type']
+    list_display = ['name', 'file_type']
 
     list_filter = [
         ('parent', admin.EmptyFieldListFilter),
     ]
-
-    @admin.display(description='Name')
-    def name_str(self, instance):
-        return instance.name or '<no name>'
 
     def get_queryset(self, request):
         return get_node_queryset().select_related('data_library')

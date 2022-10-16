@@ -1,9 +1,9 @@
-Django==3.2.15
-djangorestframework==3.13.1
-django-webpack-loader==1.5.0
+Django==3.2.16
+djangorestframework==3.14.0
+django-webpack-loader==1.6.0
 django-treebeard==4.5.1
 django-cte==1.2.1
 
 django-storages==1.13.1
-# boto3 is part of storages
+# boto3 is part of django-storages, but latest version has incorrect dependencies
 boto3==1.24.52

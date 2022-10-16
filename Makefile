@@ -6,8 +6,10 @@ clean:
 	py3clean .
 
 
+TEST ?= polyfile
+
 test:
-	@python3 $(manage) test ./polyfile --noinput --failfast
+	@python3 $(manage) test $(TEST) --noinput --failfast
 
 
 coverage:

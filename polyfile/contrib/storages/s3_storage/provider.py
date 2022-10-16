@@ -1,31 +1,11 @@
 from django.core.files.storage import Storage
-from django.forms import forms, fields
 from django.utils.timezone import now
 from storages.backends.s3boto3 import S3StaticStorage, S3Boto3Storage
 
-from app.utils.models import get_field
-from storage.data_providers.base import BaseProvider
-from storage.models import DataSourceOption, DataLibrary
+from contrib.storages.s3_storage.forms import S3ValidationForm
+from storage.base_data_provider import BaseProvider
+from storage.models import DataLibrary
 from storage.models import Node
-
-
-class S3ValidationForm(forms.Form):
-    endpoint_url = fields.URLField(
-        label='Endpoint',
-        required=True,
-        max_length=get_field(DataSourceOption, 'value').max_length,
-        help_text="Address to server with port. Example: http://localhost:9000",
-    )
-    access_key = fields.CharField(
-        label='Access key',
-        required=True,
-        max_length=get_field(DataSourceOption, 'value').max_length
-    )
-    secret_key = fields.CharField(
-        label='Secret key',
-        required=True,
-        max_length=get_field(DataSourceOption, 'value').max_length
-    )
 
 
 class S3StorageProvider(BaseProvider):

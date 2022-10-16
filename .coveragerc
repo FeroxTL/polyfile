@@ -9,6 +9,7 @@ omit =
     */factories.py
     */migrations/*
     polyfile/manage.py
+    polyfile/app/settings.py
     polyfile/app/asgi.py
     polyfile/app/wsgi.py
 

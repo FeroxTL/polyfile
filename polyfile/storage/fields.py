@@ -1,12 +1,18 @@
+import typing
+
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import Storage
 from django.db import models
 from django.db.models.fields.files import FieldFile
 from django.urls import reverse
 
 
-def _get_storage(node_instance) -> Storage:
-    provider = node_instance.data_library.data_source.get_provider(node=node_instance)
-    return provider.storage
+def _get_storage(node_instance) -> typing.Optional[Storage]:
+    try:
+        provider = node_instance.data_library.data_source.get_provider(node=node_instance)
+        return provider.storage
+    except ObjectDoesNotExist:
+        return None
 
 
 class DynamicStorageFieldFile(FieldFile):

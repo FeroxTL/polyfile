@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DataSource',
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=255, verbose_name='Data source name')),
                 ('data_provider_id', models.CharField(max_length=255, verbose_name='Data provider')),
             ],
@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Node',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
                 ('name', models.CharField(blank=False, db_index=True, max_length=255, verbose_name='Name')),
                 ('file', storage.fields.DynamicStorageFileField(upload_to='')),
                 ('size', models.PositiveIntegerField(default=0, help_text='Size in bytes', verbose_name='Size')),
@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DataSourceOption',
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
                 ('key', models.CharField(max_length=64)),
                 ('value', models.CharField(max_length=512)),
                 ('data_source', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='options', to='storage.datasource')),
