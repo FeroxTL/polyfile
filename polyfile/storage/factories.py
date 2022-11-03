@@ -6,7 +6,7 @@ from factory.django import DjangoModelFactory
 
 from accounts.factories import UserFactory
 from app.utils.tests import TestProvider
-from storage.models import DataSource, DataLibrary, Mimetype, Node, DataSourceOption
+from storage.models import DataSource, DataLibrary, Mimetype, Node, DataSourceOption, AltNode
 
 
 class DataSourceOptionFactory(DjangoModelFactory):
@@ -57,10 +57,26 @@ class FileFactory(DjangoModelFactory):
         return Node.objects.create(**kwargs)
 
 
+class ImageFactory(FileFactory):
+    name = factory.Faker('file_name', category='image')
+    mimetype__name = factory.Faker('mime_type', category='image')
+
+
 class DirectoryFactory(FileFactory):
     file_type = Node.FileTypeChoices.DIRECTORY
     mimetype = None
     size = 0
+
+
+class AltNodeFactory(DjangoModelFactory):
+    class Meta:
+        model = AltNode
+
+    node = factory.SubFactory(
+        ImageFactory,
+        data_library=factory.SelfAttribute('..data_library')
+    )
+    version = factory.Sequence(lambda n: '{0}x{0}'.format(n))
 
 
 class DataLibraryFactory(DjangoModelFactory):

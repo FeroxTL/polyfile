@@ -5,7 +5,7 @@ import {getClassList} from "./parse";
 const IconClasses = {
   default: "fa-solid fa-file-circle-question",
   directory: "fa-solid fa-folder",
-  "image": "fa-solid fa-image",
+  image: "fa-solid fa-image",
 
   getClass: function(mimeTypes=[]) {
     for (let type of mimeTypes) {

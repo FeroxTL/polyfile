@@ -1,9 +1,11 @@
 import typing
 import uuid
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.urls import reverse
 from django_cte import CTEManager
 
 from storage.base_data_provider import BaseProvider, provider_registry
@@ -116,7 +118,63 @@ class Mimetype(models.Model):
         return self.name
 
 
-class Node(models.Model):
+class AbstractNode(models.Model):
+    file = DynamicStorageFileField(
+        upload_to=DynamicStorageFileField.default_upload_to,  # required for django migrations
+        blank=True,
+    )
+    data_library = models.ForeignKey(
+        DataLibrary,
+        verbose_name='Data library',
+        on_delete=models.PROTECT,
+    )
+    mimetype = models.ForeignKey(
+        Mimetype,
+        verbose_name='Mimetype',
+        on_delete=models.PROTECT,
+        blank=True, null=True,
+    )
+    updated_at = models.DateTimeField(
+        verbose_name='Date update',
+        auto_now=True,
+    )
+
+    class Meta:
+        abstract = True
+
+    DoesNotExist: typing.Type[ObjectDoesNotExist]
+    data_library_id: int
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._path = None
+
+    @property
+    def path(self):
+        assert self._path is not None, (
+            f'No "path" attribute was provided using annotations '
+            f'({self.__class__.__name__}.objects.annotate(...)) or direct assignments.'
+        )
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        self._path = value
+
+    @property
+    def url(self):
+        raise NotImplementedError
+
+    def get_mimetype(self) -> str:
+        if self.mimetype is not None:
+            return self.mimetype.name
+        return 'application/octet-stream'
+
+    def is_node_cls(self):
+        return isinstance(self, Node)
+
+
+class Node(AbstractNode):
     """File or directory."""
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(
@@ -125,19 +183,11 @@ class Node(models.Model):
         db_index=True,
         blank=False, null=False,
     )
-    file = DynamicStorageFileField(
-        upload_to=DynamicStorageFileField.default_upload_to,  # required for django migrations
-        blank=True,
-    )
+
     size = models.PositiveIntegerField(
         verbose_name='Size',
         default=0,
         help_text='Size in bytes',
-    )
-    data_library = models.ForeignKey(
-        DataLibrary,
-        verbose_name='Data library',
-        on_delete=models.PROTECT,
     )
 
     class FileTypeChoices(models.TextChoices):
@@ -150,12 +200,6 @@ class Node(models.Model):
         db_index=True,
         choices=FileTypeChoices.choices,
     )
-    mimetype = models.ForeignKey(
-        Mimetype,
-        verbose_name='Mimetype',
-        on_delete=models.PROTECT,
-        blank=True, null=True,
-    )
 
     parent = models.ForeignKey(
         'self',
@@ -165,12 +209,8 @@ class Node(models.Model):
     )
 
     created_at = models.DateTimeField(
-        verbose_name='Created',
+        verbose_name='Creation date',
         auto_now_add=True,
-    )
-    updated_at = models.DateTimeField(
-        verbose_name='Updated',
-        auto_now=True,
     )
 
     class Meta:
@@ -180,35 +220,68 @@ class Node(models.Model):
             ('name', 'parent', 'data_library'),
         ]
 
-    data_library_id: int
     get_file_type_display: typing.Callable
-    DoesNotExist: typing.Type[ObjectDoesNotExist]
     objects = models.Manager()
     cte_objects = CTEManager()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._path = None
-
     def __str__(self):
-        return '{}: {}'.format(self.get_file_type_display(), self.name or '<root>')
+        return f'<{self.__class__.__name__}: {self.get_file_type_display()} ({self.name or "<root>"})>'
+    __repr__ = __str__
 
     @property
-    def is_directory(self):
+    def is_directory(self) -> bool:
         return self.file_type == self.FileTypeChoices.DIRECTORY
 
     def get_children(self):
         return Node.objects.filter(parent=self)
 
     def get_children_count(self):
+        # todo: really strange thing
         return self.get_children().count()
 
     @property
-    def path(self):
-        assert self._path is not None, \
-            'No path was provided using annotations (Node.objects.annotate(...)) or direct assignments.'
-        return self._path
+    def url(self):
+        return reverse(
+            'api_v1:lib-download',
+            kwargs={'lib_id': str(self.data_library_id), 'path': '/' + self.path}
+        )
 
-    @path.setter
-    def path(self, value):
-        self._path = value
+
+class AltNode(AbstractNode):
+    """Alternative version of Node."""
+    id = models.BigAutoField(primary_key=True)
+    node = models.ForeignKey(
+        Node,
+        related_name='alt_nodes',
+        null=False, blank=False,
+        on_delete=models.PROTECT,
+    )
+    version = models.CharField(
+        verbose_name='Version',
+        max_length=255,
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = 'Alt Node'
+        verbose_name_plural = 'Alt Nodes'
+        unique_together = [
+            ('node', 'version'),
+        ]
+        ordering = ['-id']
+
+    objects = models.Manager()
+    DoesNotExist: ObjectDoesNotExist
+
+    def __str__(self):
+        return f'<{self.__class__.__name__}: {self.version}>'
+    __repr__ = __str__
+
+    @property
+    def url(self):
+        url = reverse(
+            'api_v1:lib-alt',
+            kwargs={'lib_id': str(self.data_library_id), 'path': '/' + self.path}
+        )
+        url += '?' + urlencode({'v': self.version})
+        return url

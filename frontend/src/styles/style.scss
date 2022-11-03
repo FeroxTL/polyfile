@@ -39,7 +39,7 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
   padding: 0.375rem 0.2rem;
 }
 
-.mb-20 {
+.mb-20r {
   margin-bottom: 12rem !important;
 }
 
@@ -73,4 +73,10 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
   overflow: hidden;
   white-space: nowrap;
   min-width: 5rem;
+}
+
+.row-img-thumbnail {
+  // same height as h3.font-size
+  height: 1.75rem;
+  width: 1.75rem;
 }

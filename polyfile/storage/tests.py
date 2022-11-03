@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest import mock
 
 from django.core.exceptions import ValidationError
@@ -8,8 +9,8 @@ from django.urls import reverse
 
 from accounts.factories import SuperuserFactory
 from app.utils.tests import TestProvider, with_tempdir, AdminTestCase
-from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory
-from storage.models import Node, DataSource
+from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory, AltNodeFactory
+from storage.models import Node, DataSource, AltNode
 from storage.utils import get_node_by_path, get_node_queryset
 
 
@@ -197,8 +198,8 @@ class NodeAdminTest(AdminTestCase):
     def test_change_widget(self, temp_dir):
         """Ensure url in admin widget is correct."""
         data_library = DataLibraryFactory(data_source__options={'location': temp_dir}, owner=self.user)
-        with NamedTemporaryFile() as tmp_file:
-            file_node = FileFactory(data_library=data_library, file=UploadedFile(tmp_file))
+        with NamedTemporaryFile() as temp_file:
+            file_node = FileFactory(data_library=data_library, file=UploadedFile(temp_file))
         url = reverse('admin:storage_node_change', args=[file_node.pk])
         response = self.client.get(url)
         file_node = get_node_queryset().get(pk=file_node.pk)
@@ -236,3 +237,92 @@ class NodeAdminTest(AdminTestCase):
         node = qs.get()
         self.assertEqual(node.parent, directory)
         self.assertEqual(node.data_library, data_library)
+
+    @with_tempdir
+    def test_node_remove(self, temp_dir):
+        """Ensure we can remove node with its file."""
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir})
+        with NamedTemporaryFile() as temp_file:
+            file_node = FileFactory(data_library=data_library, file=UploadedFile(temp_file))
+
+        self.assertTrue(Path(file_node.file.file.file.name).exists())
+        url = reverse('admin:storage_node_delete', args=[file_node.pk])
+        response = self.client.post(url, data={'post': 'yes'})
+        self.assertTrue(response.status_code, 301)
+        self.assertFalse(Node.objects.filter(pk=file_node.pk).exists())
+        self.assertFalse(Path(file_node.file.file.file.name).exists())
+
+        # remove queryset
+        with NamedTemporaryFile() as temp_file:
+            file_node = FileFactory(data_library=data_library, file=UploadedFile(temp_file))
+        self.assertTrue(Path(file_node.file.file.file.name).exists())
+
+        url = reverse('admin:storage_node_changelist')
+        response = self.client.post(url, data={
+            'action': 'delete_selected',
+            '_selected_action': [file_node.pk],
+            'post': 'yes',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Node.objects.filter(pk=file_node.pk).exists())
+        self.assertFalse(Path(file_node.file.file.file.name).exists())
+
+
+class AltNodeAdminTest(AdminTestCase):
+    @with_tempdir
+    def test_list_node(self, temp_dir):
+        """Ensure we can list AltNodes."""
+        url = reverse('admin:storage_altnode_changelist')
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir})
+        alt_node = AltNodeFactory(data_library=data_library)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(str(alt_node.pk).encode('utf-8') in response.content)
+        self.assertTrue(alt_node.version.encode('utf-8') in response.content)
+
+    @with_tempdir
+    def test_change_widget(self, temp_dir):
+        """Ensure url in admin widget is correct."""
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir}, owner=self.user)
+        with NamedTemporaryFile() as temp_file:
+            alt_file_node = AltNodeFactory(
+                data_library=data_library, file=UploadedFile(temp_file), node__file=UploadedFile(temp_file)
+            )
+        url = reverse('admin:storage_altnode_change', args=[alt_file_node.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        alt_file_node = get_node_queryset().get(pk=alt_file_node.pk)
+        file_response = self.client.get(alt_file_node.file.url())
+        self.assertEqual(file_response.status_code, 200)
+
+    @with_tempdir
+    def test_node_remove(self, temp_dir):
+        """Ensure we can remove AltNode with its file."""
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir})
+        with NamedTemporaryFile() as temp_file:
+            alt_file_node = AltNodeFactory(
+                data_library=data_library, file=UploadedFile(temp_file), node__file=UploadedFile(temp_file)
+            )
+        self.assertTrue(Path(alt_file_node.file.file.file.name).exists())
+        url = reverse('admin:storage_altnode_delete', args=[alt_file_node.pk])
+        response = self.client.post(url, data={'post': 'yes'})
+        self.assertTrue(response.status_code, 301)
+        self.assertFalse(AltNode.objects.filter(pk=alt_file_node.pk).exists())
+        self.assertFalse(Path(alt_file_node.file.file.file.name).exists())
+
+        # remove queryset
+        with NamedTemporaryFile() as temp_file:
+            alt_file_node = AltNodeFactory(
+                data_library=data_library, file=UploadedFile(temp_file), node__file=UploadedFile(temp_file)
+            )
+        self.assertTrue(Path(alt_file_node.file.file.file.name).exists())
+
+        url = reverse('admin:storage_altnode_changelist')
+        response = self.client.post(url, data={
+            'action': 'delete_selected',
+            '_selected_action': [alt_file_node.pk],
+            'post': 'yes',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AltNode.objects.filter(pk=alt_file_node.pk).exists())
+        self.assertFalse(Path(alt_file_node.file.file.file.name).exists())

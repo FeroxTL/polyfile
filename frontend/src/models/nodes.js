@@ -8,6 +8,7 @@ function Node(data) {
   this.library = data["library"] || null;
   this.size = data["size"] || null;
   this.mimeType = data["mimetype"] || null;
+  this.hasPreview = data["has_preview"];
 
   Object.defineProperty(this, 'isFile', {
     get: () => (this["fileType"] === "file")
@@ -21,6 +22,10 @@ function Node(data) {
   Object.defineProperty(this, 'downloadUrl', {
     get: () => ("/api/v1/lib/" + this.library.id + "/download" + this.fullPath)
   });
+
+  this.getAltUrl = function(version) {
+    return "/api/v1/lib/" + this.library.id + "/alt" + this.fullPath + "?v=" + encodeURIComponent(version);
+  };
 }
 
 

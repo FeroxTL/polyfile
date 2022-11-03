@@ -20,4 +20,8 @@ class Migration(migrations.Migration):
             name='node',
             unique_together={('name', 'parent', 'data_library')},
         ),
+        migrations.AlterUniqueTogether(
+            name='altnode',
+            unique_together={('node', 'version')},
+        ),
     ]

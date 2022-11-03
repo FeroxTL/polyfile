@@ -5,11 +5,12 @@ from functools import partial
 from django.db.models import F, Value, TextField
 from django.db.models.functions import Concat
 from django_cte import With
+from storage.models import Node, DataLibrary, Mimetype
 
-if not typing.TYPE_CHECKING:
-    pass
 
-from storage.models import Node, DataLibrary
+def get_mimetype(mtype: str, default='application/octet-stream') -> Mimetype:
+    mimetype, _ = Mimetype.objects.get_or_create(name=mtype or default)
+    return mimetype
 
 
 def adapt_path(path: str) -> str:
@@ -33,11 +34,10 @@ def adapt_path(path: str) -> str:
     return '/'.join(path_list)
 
 
-def _make_node_cte(cte, **params):
+def make_node_cte(cte, base_queryset):
     # non-recursive: get root nodes
-    return Node.cte_objects.filter(
+    return base_queryset.filter(
         parent__isnull=True,
-        **params,
     ).values(
         'pk',
         'name',
@@ -57,14 +57,12 @@ def _make_node_cte(cte, **params):
 
 
 def get_node_queryset(cte=None):
-    cte = cte or With.recursive(_make_node_cte)
+    cte = cte or With.recursive(partial(make_node_cte, base_queryset=Node.cte_objects))
 
     node_cte_qs = (
         cte.join(Node.cte_objects.all(), pk=cte.col.pk)
         .with_cte(cte)
-        .annotate(
-            path=cte.col.path,
-        )
+        .annotate(path=cte.col.path)
         .order_by('path')
     )
 
@@ -75,27 +73,29 @@ def get_node_by_path(
         # todo: replace to library id? some kwargs?
         library: DataLibrary,
         path: str,
-        last_node_type: typing.Optional[str] = None
+        last_node_type: typing.Optional[str] = None,
+        strict: bool = False
 ) -> typing.Optional[Node]:
-    # todo:
-    #  typing.Optional[Node] -- maybe we should remove this option and always return Node
     """
     Get node by path in root directory.
 
     :param library: DataLibrary of node
     :param path: path relative to root directory ("/foo/bar.jpg")
     :param last_node_type: optional, asserts last node (bar.jpg) has specified file_type
+    :param strict: raise exception or return None if path is empty
     :return: Node in requested path, None if path is root directory
 
     Raises:
          Node.DoesNotExist if node is not found.
     """
-    cte = With.recursive(partial(_make_node_cte, data_library=library))
+    cte = With.recursive(partial(make_node_cte, base_queryset=Node.cte_objects.filter(data_library=library)))
 
     # todo: remove adapt_path by modifying urls.py?
     path = adapt_path(path)
 
     if not path:
+        if strict:
+            raise Node.DoesNotExist
         return None
 
     node_cte_qs = get_node_queryset(cte=cte).filter(path=path)

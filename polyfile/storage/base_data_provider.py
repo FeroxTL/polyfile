@@ -7,7 +7,7 @@ from django.forms import forms
 from django.utils.timezone import now
 
 if typing.TYPE_CHECKING:
-    from storage.models import Node, DataLibrary
+    from storage.models import Node, DataLibrary, AbstractNode
 
 
 class BaseProvider(ABC):
@@ -40,10 +40,14 @@ class BaseProvider(ABC):
         pass
 
     @staticmethod
-    def get_upload_to(instance: 'Node', filename: str):
-        return 'lib_{lib_id}/{dt}/{filename}'.format(
+    def get_upload_to(instance: 'AbstractNode', filename: str):
+        if instance.is_node_cls():
+            path = 'lib_{lib_id}/{dt}/{filename}'
+        else:
+            path = 'lib_{lib_id}/alt/{dt}/{filename}'
+        return path.format(
             lib_id=instance.data_library_id,
-            dt=now().strftime('%Y.%d'),
+            dt=now().strftime('%Y.%m'),
             filename=filename,
         )
 

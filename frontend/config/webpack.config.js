@@ -17,7 +17,7 @@ var config = {
       dependOn: 'vendor',
     },
     vendor: [path.resolve(srcDir, 'styles/style.scss')],
-    blockForm: [path.resolve(srcDir, 'styles/block-form.css')],
+    blockForm: [path.resolve(srcDir, 'styles/block-form.scss')],
   },
   output: {
     path: bundlesDir,

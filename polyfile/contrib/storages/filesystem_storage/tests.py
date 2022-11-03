@@ -86,12 +86,12 @@ class FileSystemStorageProviderTests(TestCase):
             data_source__options={'root_directory': temp_dir}
         )
 
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            tmp_file.write(b'foobar')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            temp_file.write(b'foobar')
 
             file_node = FileFactory(
                 data_library=data_library,
-                file=UploadedFile(tmp_file),
+                file=UploadedFile(temp_file),
             )
 
         file = Path(file_node.file.file.file.name)

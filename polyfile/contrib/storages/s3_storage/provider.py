@@ -4,8 +4,7 @@ from storages.backends.s3boto3 import S3StaticStorage, S3Boto3Storage
 
 from contrib.storages.s3_storage.forms import S3ValidationForm
 from storage.base_data_provider import BaseProvider
-from storage.models import DataLibrary
-from storage.models import Node
+from storage.models import DataLibrary, AbstractNode
 
 
 class S3StorageProvider(BaseProvider):
@@ -36,5 +35,8 @@ class S3StorageProvider(BaseProvider):
         return str(library_id)
 
     @staticmethod
-    def get_upload_to(instance: Node, filename: str):
-        return '/'.join([now().strftime('%Y.%d'), filename])
+    def get_upload_to(instance: AbstractNode, filename: str):
+        path = [now().strftime('%Y.%m'), filename]
+        if not instance.is_node_cls():
+            path.insert(0, 'alt')
+        return '/'.join(path)

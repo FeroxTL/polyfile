@@ -7,8 +7,8 @@ from rest_framework import serializers, exceptions
 
 from app.utils.models import get_field
 
-from storage.models import Node, Mimetype
-from storage.utils import get_node_by_path, adapt_path
+from storage.models import Node
+from storage.utils import get_node_by_path, adapt_path, get_mimetype
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -32,7 +32,8 @@ class NodeSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_has_preview(instance: Node):
-        return False
+        # todo: maybe we should use thumbnailer for this?
+        return instance.get_mimetype().startswith('image/')
 
 
 class NodeCreateSerializer(NodeSerializer):
@@ -58,12 +59,11 @@ class NodeCreateSerializer(NodeSerializer):
             raise exceptions.ValidationError({'detail': str(e)})
 
         content_type, _ = mimetypes.guess_type(str(file))
-        mimetype, _ = Mimetype.objects.get_or_create(name=content_type or 'application/octet-stream')
         node = Node(
             name=file.name,
             file_type=Node.FileTypeChoices.FILE,
             size=file.size,
-            mimetype=mimetype,
+            mimetype=get_mimetype(content_type),
             parent=parent_node,
             file=file,
             data_library=library,

@@ -10,8 +10,8 @@ from rest_framework.test import APITestCase
 
 from accounts.factories import UserFactory
 from app.utils.tests import with_tempdir
-from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory
-from storage.models import DataLibrary, Node
+from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory, ImageFactory
+from storage.models import DataLibrary, Node, AltNode
 
 
 class LibraryTests(APITestCase):
@@ -122,7 +122,7 @@ class NodeTests(APITestCase):
                 'size': current_node.size,
                 'name': current_node.name,
                 'mimetype': current_node.mimetype and current_node.mimetype.name,
-                'has_preview': False,
+                'has_preview': current_node.get_mimetype().startswith('image/'),
             },
             'library': {
                 'data_source': current_node.data_library.data_source.pk,
@@ -131,7 +131,7 @@ class NodeTests(APITestCase):
             },
             'nodes': [{
                 'file_type': child.file_type,
-                'has_preview': False,
+                'has_preview': current_node.get_mimetype().startswith('image/'),
                 'mimetype': child.mimetype and child.mimetype.name,
                 'size': child.size,
                 'name': child.name,
@@ -329,62 +329,62 @@ class NodeTests(APITestCase):
         url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         image = Image.new('RGB', (100, 100))
 
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            image.save(tmp_file)
-            tmp_file.seek(0)
-            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image.save(temp_file)
+            temp_file.seek(0)
+            response = self.client.post(url, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_201_CREATED, response.status_code, response.data)
 
-            tmp_path = Path(tmp_file.name)
+            tmp_path = Path(temp_file.name)
             self.assertDictEqual(response.json(), {
                 'name': tmp_path.name,
                 'file_type': 'file',
                 'mimetype': 'image/jpeg',
                 'size': tmp_path.stat().st_size,
-                'has_preview': False
+                'has_preview': True
             })
 
             # File already exists
-            tmp_file.seek(0)
-            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+            temp_file.seek(0)
+            response = self.client.post(url, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
             self.assertListEqual(response.json(), [
-                f'File with name {Path(tmp_file.name).name} already exists',
+                f'File with name {Path(temp_file.name).name} already exists',
             ])
 
         # library does not exist
         url_lib_dne = reverse('api_v1:lib-upload', kwargs={'lib_id': str(uuid.uuid4()), 'path': '/'})
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            image.save(tmp_file)
-            response = self.client.post(url_lib_dne, {'file': tmp_file}, format='multipart')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image.save(temp_file)
+            response = self.client.post(url_lib_dne, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code, response.data)
             self.assertDictEqual(response.json(), {'detail': 'DataLibrary matching query does not exist.'})
 
         # path does not exist
         url_path_dne = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist/'})
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            image.save(tmp_file)
-            tmp_file.seek(0)
-            response = self.client.post(url_path_dne, {'file': tmp_file}, format='multipart')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image.save(temp_file)
+            temp_file.seek(0)
+            response = self.client.post(url_path_dne, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
             self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
 
         # target path is not directory
         target_node = FileFactory(data_library=data_library)
         url_nad = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': f'/{target_node.name}'})
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            image.save(tmp_file)
-            tmp_file.seek(0)
-            response = self.client.post(url_nad, {'file': tmp_file}, format='multipart')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image.save(temp_file)
+            temp_file.seek(0)
+            response = self.client.post(url_nad, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
             self.assertDictEqual(response.json(), {'detail': 'Incorrect node type'})
 
         # anonymous file upload
         self.client.logout()
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            image.save(tmp_file)
-            tmp_file.seek(0)
-            response = self.client.post(url, {'file': tmp_file}, format='multipart')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image.save(temp_file)
+            temp_file.seek(0)
+            response = self.client.post(url, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code, response.data)
 
     @with_tempdir
@@ -422,7 +422,66 @@ class NodeTests(APITestCase):
         response = self.client.get(url_dne)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+        # Root node
+        url_dne = reverse('api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
+        response = self.client.get(url_dne)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
         # anonymous file get
         self.client.logout()
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AltNodeTestCase(APITestCase):
+    maxDiff = None
+
+    def setUp(self) -> None:
+        self.user = UserFactory()
+        self.client.force_login(self.user)
+
+    @with_tempdir
+    def test_image_thumbnail(self, temp_dir):
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image = Image.new("RGB", size=(50, 50), color=(255, 0, 0))
+            image.save(temp_file)
+            temp_file.seek(0)
+            file_node = ImageFactory(
+                data_library=data_library,
+                file=UploadedFile(temp_file),
+                mimetype__name='image/jpeg',
+            )
+
+        url = '{}?v={}'.format(
+            reverse('api_v1:lib-alt', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'}),
+            '50x50',
+        )
+        response = self.client.get(url)
+        self.assertTrue(AltNode.objects.filter(node=file_node).exists())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers['Content-Type'], 'image/jpeg')
+        alt_node = AltNode.objects.filter(node=file_node).get()
+        self.assertEqual(response.headers['Content-Disposition'], f'inline; filename="{Path(alt_node.file.name).name}"')
+        self.assertTrue(len(response.getvalue()) > 100)
+
+        # Invalid url -- no version
+        url = reverse('api_v1:lib-alt', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json(), {'detail': '?v= is required'})
+
+        # Invalid url -- invalid version
+        url = '{}?v={}'.format(
+            reverse('api_v1:lib-alt', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'}),
+            'test',
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # remove main file removes all thumbnails
+        url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(AltNode.objects.exists())
+        self.assertFalse(Node.objects.exists())

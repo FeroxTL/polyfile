@@ -22,4 +22,5 @@ urlpatterns = [
     path('lib/<uuid:lib_id>/mkdir<path:path>', dl_views.DataLibraryMkdirView.as_view(), name='lib-mkdir'),
     path('lib/<uuid:lib_id>/rm<path:path>', dl_views.DataLibraryDeleteNodeView.as_view(), name='lib-rm'),
     path('lib/<uuid:lib_id>/download<path:path>', dl_views.DataLibraryDownloadView.as_view(), name='lib-download'),
+    path('lib/<uuid:lib_id>/alt<path:path>', dl_views.DataLibraryAltView.as_view(), name='lib-alt'),
 ]

@@ -4,7 +4,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import Storage
 from django.db import models
 from django.db.models.fields.files import FieldFile
-from django.urls import reverse
 
 
 def _get_storage(node_instance) -> typing.Optional[Storage]:
@@ -21,10 +20,7 @@ class DynamicStorageFieldFile(FieldFile):
         self.storage = _get_storage(instance)
 
     def url(self):
-        return reverse(
-            'api_v1:lib-download',
-            kwargs={'lib_id': str(self.instance.data_library_id), 'path': '/' + self.instance.path}
-        )
+        return self.instance.url
 
 
 class DynamicStorageFileField(models.FileField):
@@ -33,7 +29,6 @@ class DynamicStorageFileField(models.FileField):
     @staticmethod
     def default_upload_to(instance, filename):
         provider = instance.data_library.data_source.get_provider(node=instance)
-
         return provider.get_upload_to(instance=instance, filename=filename)
 
     def pre_save(self, model_instance, add):

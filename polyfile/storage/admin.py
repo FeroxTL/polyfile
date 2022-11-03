@@ -1,11 +1,14 @@
+from functools import partial
+
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm, ChoiceField
+from django_cte import With
 
 from storage.base_data_provider import provider_registry
-from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype, get_data_provider_class
-from storage.utils import get_node_queryset
+from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype, get_data_provider_class, AltNode
+from storage.utils import get_node_queryset, make_node_cte
 
 admin.site.register(Mimetype)
 
@@ -95,3 +98,40 @@ class NodeAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return get_node_queryset().select_related('data_library')
+
+    def delete_model(self, request, obj):
+        obj.file.delete()
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        for instance in queryset:
+            instance.file.delete()
+        super().delete_queryset(request, queryset)
+
+
+@admin.register(AltNode)
+class AltNodeAdmin(admin.ModelAdmin):
+    raw_id_fields = ['node', 'data_library', 'mimetype']
+    list_display = ['node_id', 'version', 'data_library', 'file']
+
+    @staticmethod
+    def get_node_path(node: Node):
+        cte = With.recursive(partial(
+            make_node_cte,
+            base_queryset=Node.cte_objects.filter(data_library_id=node.data_library_id)
+        ))
+        return get_node_queryset(cte=cte).get(pk=node.pk).path
+
+    def get_object(self, request, object_id, from_field=None):
+        instance = super().get_object(request, object_id, from_field)
+        instance.path = self.get_node_path(instance.node)
+        return instance
+
+    def delete_model(self, request, obj):
+        obj.file.delete()
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        for instance in queryset:
+            instance.file.delete()
+        super().delete_queryset(request, queryset)

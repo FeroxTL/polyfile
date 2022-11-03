@@ -2,12 +2,13 @@ import datetime
 import tempfile
 from unittest import mock
 
+from PIL import Image
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 
 from accounts.factories import UserFactory
 from contrib.storages.s3_storage.provider import S3StorageProvider
-from storage.factories import DataLibraryFactory, FileFactory
+from storage.factories import DataLibraryFactory, FileFactory, ImageFactory, AltNodeFactory
 
 
 class FileSystemStorageProviderTests(TestCase):
@@ -48,12 +49,33 @@ class FileSystemStorageProviderTests(TestCase):
             request.assert_any_call('ListBuckets', {})
 
         # upload file
-        with tempfile.NamedTemporaryFile(suffix='.jpg') as tmp_file:
-            tmp_file.write(b'foobar')
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            temp_file.write(b'foobar')
 
             with mock.patch('botocore.client.BaseClient._make_api_call') as request:
                 FileFactory(
                     data_library=data_library,
-                    file=UploadedFile(tmp_file),
+                    file=UploadedFile(temp_file),
                 )
                 request.assert_called_once()
+
+        # thumbnail
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            with mock.patch('botocore.client.BaseClient._make_api_call') as request:
+                image = Image.new("RGB", size=(50, 50), color=(255, 0, 0))
+                image.save(temp_file)
+                temp_file.seek(0)
+                file_node = ImageFactory(
+                    data_library=data_library,
+                    file=UploadedFile(temp_file),
+                    mimetype__name='image/jpeg',
+                )
+        request.assert_called_once()
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            with mock.patch('botocore.client.BaseClient._make_api_call') as request:
+                image = Image.new("RGB", size=(50, 50), color=(255, 0, 0))
+                image.save(temp_file)
+                temp_file.seek(0)
+                AltNodeFactory(node=file_node, data_library=data_library, file=UploadedFile(temp_file))
+        request.assert_called_once()

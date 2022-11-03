@@ -20,7 +20,9 @@ const NodeItem = {
     return (
       m(".d-table", [
         m("div.d-table-cell align-middle text-center",
-          m(MimeIcon, {class: "text-secondary h3", ...iconOptions})
+          node.hasPreview &&
+            m("img.row-img-thumbnail", {src: node.getAltUrl("50x50")}) ||
+            m(MimeIcon, {class: "text-secondary h3", ...iconOptions})
         ),
         m("div.d-table-cell ps-2", [
           m("b.text-break", node.name),
@@ -123,7 +125,7 @@ const NodeListView = {
     }
 
     return (
-      m("table.table.mb-20", {class: nodes.length ? "table-hover" : null}, [
+      m("table.table.mb-20r", {class: nodes.length ? "table-hover" : null}, [
         m("thead",
           m("tr", [
             m("th.col p-0[scope=col]", "Name"),

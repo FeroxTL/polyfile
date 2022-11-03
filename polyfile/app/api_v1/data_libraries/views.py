@@ -1,7 +1,11 @@
 # todo: make errors in one style maybe {"message": "error message"}
+import re
 import typing
+from io import BytesIO
 from uuid import UUID
 
+from PIL import ImageOps, Image
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction, models
 from django.db.models import Case, When
 from django.http import Http404, FileResponse
@@ -12,9 +16,8 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from app.api_v1.data_libraries.serializers import data_library_serializers, node_serializers
-from storage.fields import DynamicStorageFieldFile
-from storage.models import DataLibrary, Node
-from storage.utils import get_node_by_path
+from storage.models import DataLibrary, Node, AltNode, AbstractNode
+from storage.utils import get_node_by_path, get_mimetype
 
 
 class DataLibraryListCreateView(generics.ListCreateAPIView):
@@ -217,9 +220,14 @@ class DataLibraryDeleteNodeView(generics.DestroyAPIView):
         except Node.DoesNotExist as e:
             raise Http404(str(e))
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         # todo: maybe we should mark files as deleted and clean them later
         instance.file.delete()
+        alt_nodes_queryset = instance.alt_nodes.all()
+        for alt_node in alt_nodes_queryset:
+            alt_node.file.delete()
+        alt_nodes_queryset.delete()
         instance.delete()
 
 
@@ -231,28 +239,79 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
     def get_library(self, lib_id: UUID) -> DataLibrary:
         return DataLibrary.objects.get(owner=self.request.user, id=lib_id)
 
-    def retrieve(self, request, *args, **kwargs):
+    def get_object(self):
         path = self.kwargs['path']
 
         try:
             library = self.get_library(self.kwargs[self.lookup_url_kwarg])
-            node = get_node_by_path(
+            instance = get_node_by_path(
                 library=library,
                 path=path,
-                last_node_type=Node.FileTypeChoices.FILE
+                last_node_type=Node.FileTypeChoices.FILE,
+                strict=True
             )
-
-            file: DynamicStorageFieldFile = node.file
+            return instance
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
             raise exceptions.NotFound(str(e))
 
-        content_type = node.mimetype and node.mimetype.name or 'application/octet-stream'
+    def retrieve(self, request, *args, **kwargs):
+        instance: AbstractNode = self.get_object()
 
         try:
             return FileResponse(
-                file.open('rb'),  # todo: use sendfile, that is really slow
-                content_type=content_type,
-                headers={'Last-Modified': http_date(node.updated_at.timestamp())}
+                instance.file.open('rb'),  # todo: use sendfile, that is really slow
+                content_type=instance.get_mimetype(),
+                headers={'Last-Modified': http_date(instance.updated_at.timestamp())}
             )
-        except ValueError:  # file.open failed
+        except (ValueError, OSError):  # file.open failed
             raise exceptions.APIException()
+
+
+class DataLibraryAltView(DataLibraryDownloadView):
+    def _parse_thumb_size(self):
+        size = self.request.query_params.get('v', '')
+        match = re.match(r'^(\d+)x(\d+)$', size)
+        if match:
+            return tuple(map(int, match.groups()))
+
+        raise exceptions.ParseError('?v= is invalid')
+
+    def get_image_thumbnail(self, node) -> AltNode:
+        thumb_size = self._parse_thumb_size()
+        version = self.request.query_params.get('v')
+
+        file_io = BytesIO()
+        image = ImageOps.fit(Image.open(node.file), thumb_size, Image.ANTIALIAS)
+        image.save(file_io, format='jpeg')
+
+        mimetype = get_mimetype('image/jpeg')
+        instance, created = AltNode.objects.get_or_create(
+            version=version,
+            node=node,
+            defaults=dict(
+                mimetype=mimetype,
+                data_library_id=node.data_library_id,
+                file=InMemoryUploadedFile(
+                    file=file_io,
+                    field_name=None,
+                    name=f'{version}.{node.name}',  # todo: field length
+                    content_type=mimetype.name,
+                    size=file_io.tell(),
+                    charset=None,
+                ),
+            ),
+        )
+        return instance
+
+    def get_object(self):
+        node = super().get_object()
+        version = self.request.query_params.get('v')
+        if version is None:
+            raise exceptions.NotFound('?v= is required')
+
+        try:
+            return AltNode.objects.get(node=node, version=version)
+        except AltNode.DoesNotExist:
+            # todo: if mimetype.startswith('image/') ...
+            #  or move to thumbnailer
+            return self.get_image_thumbnail(node=node)
