@@ -96,6 +96,7 @@ class DataLibrary(models.Model):
 
     objects = models.Manager()
     DoesNotExist: ObjectDoesNotExist
+    data_source_id: int
 
     def __str__(self):
         return self.name

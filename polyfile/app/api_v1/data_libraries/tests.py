@@ -19,6 +19,10 @@ class LibraryTests(APITestCase):
         self.user = UserFactory()
         self.client.force_login(self.user)
 
+    @staticmethod
+    def to_dict(instance: DataLibrary):
+        return {'id': str(instance.id), 'name': instance.name, 'data_source': instance.data_source_id}
+
     @with_tempdir
     def test_create_library(self, temp_dir):
         """Ensure we can create a new NodeLibrary object."""
@@ -63,6 +67,12 @@ class LibraryTests(APITestCase):
         url = reverse('api_v1:lib-detail', args=[str(data_library.pk)])
         data = {'name': 'foobar'}
 
+        # get library
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.json(), self.to_dict(data_library))
+
+        # update library
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertDictEqual(response.json(), {
@@ -83,6 +93,10 @@ class LibraryTests(APITestCase):
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
+        # anonymous get
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+
 
 class NodeTests(APITestCase):
     maxDiff = None
@@ -98,7 +112,7 @@ class NodeTests(APITestCase):
         return {
             'current_node': {},
             'library': {
-                'data_source': data_library.data_source.pk,
+                'data_source': data_library.data_source_id,
                 'id': str(data_library.pk),
                 'name': data_library.name,
             },
