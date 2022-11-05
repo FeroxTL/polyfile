@@ -1,6 +1,8 @@
+import tempfile
 from pathlib import Path
 from unittest import mock
 
+from PIL import Image
 from django.core.exceptions import ValidationError
 from django.core.files.temp import NamedTemporaryFile
 from django.core.files.uploadedfile import UploadedFile
@@ -9,8 +11,10 @@ from django.urls import reverse
 
 from accounts.factories import SuperuserFactory
 from app.utils.tests import TestProvider, with_tempdir, AdminTestCase
-from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory, AltNodeFactory
+from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory, AltNodeFactory, \
+    ImageFactory
 from storage.models import Node, DataSource, AltNode
+from storage.thumbnailer import Thumbnailer
 from storage.utils import get_node_by_path, get_node_queryset
 
 
@@ -326,3 +330,61 @@ class AltNodeAdminTest(AdminTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(AltNode.objects.filter(pk=alt_file_node.pk).exists())
         self.assertFalse(Path(alt_file_node.file.file.file.name).exists())
+
+
+class ThumbnailTestCase(TestCase):
+    def test_thumbnailer_setup(self):
+        """Pass invalid parameters to Thumbnailer."""
+        thumbnailer = Thumbnailer()
+
+        # There is no supported formats
+        with mock.patch('storage.thumbnailer.Image') as image:
+            image.MIME = {}
+            thumbnailer.default_formats = ['png', 'jpeg']
+            thumbnailer.setup()
+        self.assertEqual(thumbnailer.default_formats, [])
+
+        # Normal setup
+        with mock.patch('storage.thumbnailer.Image') as image:
+            image.MIME = {'PNG': 'image/png', 'JPEG': 'image/jpeg'}
+            thumbnailer.default_formats = ['png', 'jpeg']
+            thumbnailer.setup()
+        self.assertEqual(thumbnailer.default_formats, ['PNG', 'JPEG'])
+
+    @with_tempdir
+    def test_thumbnails(self, temp_dir):
+        """Test thumbnail creation."""
+        data_library = DataLibraryFactory(data_source__options={'location': temp_dir})
+        thumbnailer = Thumbnailer()
+        thumbnailer.setup()
+        self.assertEqual(thumbnailer.default_formats, ['JPEG', 'PNG'])
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            image = Image.new("RGB", size=(50, 50), color=(255, 0, 0))
+            image.save(temp_file)
+            temp_file.seek(0)
+            image_node = ImageFactory(
+                data_library=data_library,
+                file=UploadedFile(temp_file),
+                mimetype__name='image/jpeg',
+            )
+
+        # Valid thumbnail
+        thumb = thumbnailer.get_thumbnail(node=image_node, thumb_size=(20, 20))
+        self.assertEqual(thumb.mimetype, 'image/jpeg')
+        thumb.file.seek(0)
+        image = Image.open(thumb.file)
+        self.assertEqual(image.size, (20, 20))
+
+        # Image format not available, make png
+        thumbnailer.default_formats = ['PNG']
+        thumb = thumbnailer.get_thumbnail(node=image_node, thumb_size=(30, 30))
+        self.assertEqual(thumb.mimetype, 'image/png')
+        thumb.file.seek(0)
+        image = Image.open(thumb.file)
+        self.assertEqual(image.size, (30, 30))
+
+        # No available format
+        thumbnailer.default_formats = []
+        with self.assertRaises(Exception):
+            thumbnailer.get_thumbnail(node=image_node, thumb_size=(40, 40))

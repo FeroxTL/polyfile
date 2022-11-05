@@ -8,6 +8,7 @@ from rest_framework import serializers, exceptions
 from app.utils.models import get_field
 
 from storage.models import Node
+from storage.thumbnailer import thumbnailer
 from storage.utils import get_node_by_path, adapt_path, get_mimetype
 
 
@@ -32,8 +33,7 @@ class NodeSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_has_preview(instance: Node):
-        # todo: maybe we should use thumbnailer for this?
-        return instance.get_mimetype().startswith('image/')
+        return thumbnailer.can_get_thumbnail(mimetype=instance.get_mimetype())
 
 
 class NodeCreateSerializer(NodeSerializer):

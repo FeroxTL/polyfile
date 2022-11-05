@@ -12,6 +12,7 @@ from accounts.factories import UserFactory
 from app.utils.tests import with_tempdir
 from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory, ImageFactory
 from storage.models import DataLibrary, Node, AltNode
+from storage.thumbnailer import thumbnailer
 
 
 class LibraryTests(APITestCase):
@@ -136,7 +137,7 @@ class NodeTests(APITestCase):
                 'size': current_node.size,
                 'name': current_node.name,
                 'mimetype': current_node.mimetype and current_node.mimetype.name,
-                'has_preview': current_node.get_mimetype().startswith('image/'),
+                'has_preview': thumbnailer.can_get_thumbnail(current_node.get_mimetype()),
             },
             'library': {
                 'data_source': current_node.data_library.data_source.pk,
@@ -145,7 +146,7 @@ class NodeTests(APITestCase):
             },
             'nodes': [{
                 'file_type': child.file_type,
-                'has_preview': current_node.get_mimetype().startswith('image/'),
+                'has_preview': thumbnailer.can_get_thumbnail(current_node.get_mimetype()),
                 'mimetype': child.mimetype and child.mimetype.name,
                 'size': child.size,
                 'name': child.name,

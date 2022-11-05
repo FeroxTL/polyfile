@@ -1,10 +1,8 @@
 # todo: make errors in one style maybe {"message": "error message"}
 import re
 import typing
-from io import BytesIO
 from uuid import UUID
 
-from PIL import ImageOps, Image
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction, models
 from django.db.models import Case, When
@@ -17,6 +15,7 @@ from rest_framework.response import Response
 
 from app.api_v1.data_libraries.serializers import data_library_serializers, node_serializers
 from storage.models import DataLibrary, Node, AltNode, AbstractNode
+from storage.thumbnailer import thumbnailer, ThumbnailException
 from storage.utils import get_node_by_path, get_mimetype
 
 
@@ -268,23 +267,19 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
 
 
 class DataLibraryAltView(DataLibraryDownloadView):
-    def _parse_thumb_size(self):
-        size = self.request.query_params.get('v', '')
+    @staticmethod
+    def _parse_thumb_size(size):
         match = re.match(r'^(\d+)x(\d+)$', size)
         if match:
             return tuple(map(int, match.groups()))
 
         raise exceptions.ParseError('?v= is invalid')
 
-    def get_image_thumbnail(self, node) -> AltNode:
-        thumb_size = self._parse_thumb_size()
+    def get_image_thumbnail(self, node: Node) -> AltNode:
         version = self.request.query_params.get('v')
-
-        file_io = BytesIO()
-        image = ImageOps.fit(Image.open(node.file), thumb_size, Image.ANTIALIAS)
-        image.save(file_io, format='jpeg')
-
-        mimetype = get_mimetype('image/jpeg')
+        thumbnail_size = self._parse_thumb_size(version)
+        thumbnail = thumbnailer.get_thumbnail(node=node, thumb_size=thumbnail_size)
+        mimetype = get_mimetype(thumbnail.mimetype)
         instance, created = AltNode.objects.get_or_create(
             version=version,
             node=node,
@@ -292,11 +287,11 @@ class DataLibraryAltView(DataLibraryDownloadView):
                 mimetype=mimetype,
                 data_library_id=node.data_library_id,
                 file=InMemoryUploadedFile(
-                    file=file_io,
+                    file=thumbnail.file,
                     field_name=None,
                     name=f'{version}.{node.name}',  # todo: field length
                     content_type=mimetype.name,
-                    size=file_io.tell(),
+                    size=thumbnail.file.tell(),
                     charset=None,
                 ),
             ),
@@ -312,6 +307,7 @@ class DataLibraryAltView(DataLibraryDownloadView):
         try:
             return AltNode.objects.get(node=node, version=version)
         except AltNode.DoesNotExist:
-            # todo: if mimetype.startswith('image/') ...
-            #  or move to thumbnailer
-            return self.get_image_thumbnail(node=node)
+            try:
+                return self.get_image_thumbnail(node=node)
+            except ThumbnailException:
+                raise exceptions.ParseError('Can not create thumbnail')
