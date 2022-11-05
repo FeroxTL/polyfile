@@ -188,7 +188,7 @@ class MkDirectorySerializer(NodeSerializer):
 
         node, created = Node.objects.get_or_create(parent=parent_node, **params)
         if not created:
-            raise exceptions.ValidationError([f'File "{adapt_path(path)}/{name}" already exists'])
+            raise exceptions.ValidationError(f'File "{adapt_path(path)}/{name}" already exists')
             # todo: one style exceptions
 
         return node

@@ -23,3 +23,16 @@ class SystemTests(APITestCase):
         self.client.logout()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+    def test_api_root(self):
+        url = reverse('api_v1:index')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json(), [
+            {'url': reverse('api_v1:lib-list'), 'name': 'My libraries'}
+        ])
+
+        # anonymous
+        self.client.logout()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)

@@ -19,7 +19,9 @@ class ApiIndex(views.APIView):
 
     @staticmethod
     def get(request):
-        # todo: use this for global menu? add permissions? or enable only in debug mode?
         return response.Response([
-            {'url': reverse('api_v1:lib-list')},
+            {
+                'url': reverse('api_v1:lib-list'),
+                'name': 'My libraries',
+            },
         ])
