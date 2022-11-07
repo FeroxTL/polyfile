@@ -309,5 +309,5 @@ class DataLibraryAltView(DataLibraryDownloadView):
         except AltNode.DoesNotExist:
             try:
                 return self.get_image_thumbnail(node=node)
-            except ThumbnailException:
-                raise exceptions.ParseError('Can not create thumbnail')
+            except ThumbnailException as e:
+                raise exceptions.ParseError(e)

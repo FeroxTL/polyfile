@@ -500,3 +500,24 @@ class AltNodeTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(AltNode.objects.exists())
         self.assertFalse(Node.objects.exists())
+
+    @with_tempdir
+    def test_invalid_image(self, temp_dir):
+        """Make thumbnail with invalid image data."""
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
+            temp_file.write(b'foobar')
+            temp_file.seek(0)
+            file_node = ImageFactory(
+                data_library=data_library,
+                file=UploadedFile(temp_file),
+                mimetype__name='image/jpeg',
+            )
+
+        url = '{}?v={}'.format(
+            reverse('api_v1:lib-alt', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'}),
+            '50x50',
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'detail': 'Can not open thumbnail'})

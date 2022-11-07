@@ -2,7 +2,7 @@ import typing
 from collections import namedtuple
 from io import BytesIO
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from storage.models import Node
 from storage.utils import get_mimetype
@@ -48,10 +48,13 @@ class Thumbnailer:
     def get_thumbnail(self, node: Node, thumb_size: typing.Tuple[int, int]) -> ThumbnailResult:
         """Get thumbnail from Node."""
         if not self.can_get_thumbnail(node.get_mimetype()) or not self.default_formats:
-            raise ThumbnailException('Can not make thumbnail')
+            raise ThumbnailException('Can not create thumbnail')
 
         file_io = BytesIO()
-        node_image = Image.open(node.file)
+        try:
+            node_image = Image.open(node.file)
+        except UnidentifiedImageError:
+            raise ThumbnailException('Can not open thumbnail')
 
         if node_image.format and node_image.format.upper() in self.default_formats:
             thumbnail_format = node_image.format.upper()

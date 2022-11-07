@@ -54,6 +54,9 @@ ROOT_URLCONF = 'app.urls'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 APPEND_SLASH = False
+# TODO
+# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+# EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
 
 WEBPACK_LOADER = {
   'DEFAULT': {

@@ -1,7 +1,6 @@
 // Import Custom SCSS
 @import "global.scss";
 
-
 body {
   display: flex;
   align-items: center;
@@ -31,12 +30,11 @@ body {
   border-bottom-left-radius: 0;
 }
 
-.form-signin input[type="password"] {
+.form :last-child input {
   margin-bottom: 10px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
-
 
 .bd-placeholder-img {
   font-size: 1.125rem;
