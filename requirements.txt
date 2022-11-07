@@ -1,7 +1,6 @@
 Django==3.2.16
 djangorestframework==3.14.0
 django-webpack-loader==1.6.0
-django-treebeard==4.5.1
 django-cte==1.2.1
 
 django-storages==1.13.1
