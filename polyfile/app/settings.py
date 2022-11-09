@@ -30,7 +30,9 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'webpack_loader',
+    'djcelery_email',
 
+    'app',
     'accounts',
     'storage',
 
@@ -53,9 +55,26 @@ ROOT_URLCONF = 'app.urls'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 APPEND_SLASH = False
-# TODO
-# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-# EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
+
+EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+# CELERY_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+CELERY_EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+# EMAIL_HOST = ''
+# EMAIL_PORT = ''
+# EMAIL_HOST_USER = ''
+# EMAIL_HOST_PASSWORD = ''
+# EMAIL_USE_TLS = ''
+# EMAIL_USE_SSL = ''
+# EMAIL_TIMEOUT = ''
+
+EMAIL_FILE_PATH = '/tmp/app-messages'
+
+
+# Celery
+CELERY_BROKER_URL = 'redis://localhost/0'
+CELERY_RESULT_BACKEND = 'redis://localhost/0'
+
+# Webpack
 
 WEBPACK_LOADER = {
   'DEFAULT': {

@@ -38,6 +38,9 @@ python ./manage.py createsuperuser
 
 # Running dev server
 python ./manage.py runserver
+
+# Running background celery worker
+celery -A app worker -l INFO
 ```
 
 ##### Frontend:
