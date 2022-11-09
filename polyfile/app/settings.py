@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'webpack_loader',
     'djcelery_email',
+    'axes',
 
     'app',
     'accounts',
@@ -49,12 +50,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # AxesMiddleware should be the last middleware in the MIDDLEWARE list.
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'app.urls'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 APPEND_SLASH = False
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 # CELERY_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -73,6 +81,13 @@ EMAIL_FILE_PATH = '/tmp/app-messages'
 # Celery
 CELERY_BROKER_URL = 'redis://localhost/0'
 CELERY_RESULT_BACKEND = 'redis://localhost/0'
+
+
+# Axes
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 3
+AXES_LOCKOUT_TEMPLATE = 'accounts/account_is_locked.html'
+
 
 # Webpack
 

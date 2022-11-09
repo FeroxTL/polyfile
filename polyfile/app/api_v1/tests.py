@@ -9,8 +9,8 @@ from accounts.factories import UserFactory
 class AuthTests(TestCase):
     def test_user_logout(self):
         """Ensure we can log out."""
-        user = UserFactory()
-        self.client.force_login(user)
+        self.user = UserFactory()
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
         url = reverse('api_v1:logout')
 
         response = self.client.post(url, {}, format='json')

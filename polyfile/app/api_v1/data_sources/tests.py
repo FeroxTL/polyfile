@@ -15,7 +15,7 @@ class DataSourceRegularUserTests(APITestCase):
     """Test regular user data source creation."""
     def setUp(self) -> None:
         self.user = UserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     def test_data_source_create(self):
         url = reverse('api_v1:ds-list')
@@ -38,7 +38,7 @@ class DataSourceRegularUserTests(APITestCase):
 class DataSourceTests(APITestCase):
     def setUp(self) -> None:
         self.user = SuperuserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     def test_data_source_create(self):
         url = reverse('api_v1:ds-list')

@@ -38,7 +38,7 @@ provider_registry.register(TestProvider)
 class AdminTestCase(TestCase):
     def setUp(self) -> None:
         self.user = SuperuserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @staticmethod
     def get_options(options: dict, delete_list_keys: list = None):

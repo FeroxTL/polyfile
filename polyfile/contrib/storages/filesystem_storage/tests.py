@@ -75,7 +75,7 @@ class FileSystemStorageProviderTests(TestCase):
     """FileStorage tests."""
     def setUp(self) -> None:
         self.user = UserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @with_tempdir
     def test_node_lifecycle(self, temp_dir):

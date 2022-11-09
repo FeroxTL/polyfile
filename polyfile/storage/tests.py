@@ -148,7 +148,7 @@ class DataSourceAdminTest(AdminTestCase):
 class DataLibraryAdminTest(TestCase):
     def setUp(self) -> None:
         self.user = SuperuserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @with_tempdir
     def test_init_library(self, temp_dir):

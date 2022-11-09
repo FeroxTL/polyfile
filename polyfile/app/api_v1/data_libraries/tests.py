@@ -18,7 +18,7 @@ from storage.thumbnailer import thumbnailer
 class LibraryTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @staticmethod
     def to_dict(instance: DataLibrary):
@@ -104,7 +104,7 @@ class NodeTests(APITestCase):
 
     def setUp(self) -> None:
         self.user = UserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @staticmethod
     def to_json_root(data_library: DataLibrary):
@@ -453,7 +453,7 @@ class AltNodeTestCase(APITestCase):
 
     def setUp(self) -> None:
         self.user = UserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @with_tempdir
     def test_image_thumbnail(self, temp_dir):

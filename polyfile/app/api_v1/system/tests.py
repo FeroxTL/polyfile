@@ -7,7 +7,7 @@ from accounts.factories import UserFactory
 class SystemTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     def test_current_user(self):
         """Ensure we can get current user info."""
