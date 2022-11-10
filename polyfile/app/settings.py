@@ -63,6 +63,7 @@ AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+PASSWORD_RESET_FORM_TIMEOUT = 10 * 24 * 60 * 60  # 3 days
 
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 # CELERY_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -86,7 +87,7 @@ CELERY_RESULT_BACKEND = 'redis://localhost/0'
 # Axes
 AXES_ENABLED = True
 AXES_FAILURE_LIMIT = 3
-AXES_LOCKOUT_TEMPLATE = 'accounts/account_is_locked.html'
+AXES_LOCKOUT_TEMPLATE = 'accounts/errors/account_is_locked.html'
 
 
 # Webpack

@@ -1,0 +1,8 @@
+{% extends "accounts/password_reset/password_reset_done.html" %}
+
+{% block alert_class %}alert alert-warning{% endblock %}
+
+{% block form %}
+  <p class="alert alert-danger">Can not send an email: Too many attempts</p>
+  {{ block.super }}
+{% endblock %}

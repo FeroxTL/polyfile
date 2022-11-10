@@ -1,0 +1,6 @@
+{% extends "accounts/base.html" %}
+{% block title %}Account is locked {{ block.super }}{% endblock %}
+
+{% block form %}
+  <p class="alert alert-danger">Account is locked: too many login attempts. Contact an admin to unlock your account.</p>
+{% endblock %}

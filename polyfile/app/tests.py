@@ -1,4 +1,5 @@
 import re
+from datetime import timedelta
 from io import StringIO
 
 from django.conf import settings
@@ -7,10 +8,12 @@ from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.timezone import now
 from flake8.api import legacy as flake8
 from rest_framework import status
 
 from accounts.factories import UserFactory
+from accounts.models import ResetPasswordAttempt
 
 
 class TestAnimal(TestCase):
@@ -88,7 +91,6 @@ class TestAccounts(TestCase):
         # invalid data
         response = self.client.post(url, {}, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # print(response.context)
         self.assertIsNotNone(response.context.get('form'))
         self.assertTrue(len(response.context.get('form').errors))
 
@@ -119,3 +121,29 @@ class TestAccounts(TestCase):
         self.assertRedirects(response, url)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_user_reset_password_max_attempts(self):
+        """Ensure we do not send too many emails."""
+        url = reverse('password_reset')
+        data_reset_password = {'email': self.user.email}
+
+        # send reset form
+        response = self.client.post(url, data_reset_password)
+        r_url = reverse('password_reset_done')
+        self.assertRedirects(response, r_url)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(ResetPasswordAttempt.objects.count(), 1)
+
+        # send again form
+        response = self.client.post(url, data_reset_password)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(ResetPasswordAttempt.objects.count(), 1)
+
+        # make attempts older
+        ResetPasswordAttempt.objects.all().update(
+            expire_date=now() - timedelta(seconds=settings.PASSWORD_RESET_FORM_TIMEOUT)
+        )
+        response = self.client.post(url, data_reset_password)
+        self.assertRedirects(response, r_url)
+        self.assertEqual(len(mail.outbox), 2)
