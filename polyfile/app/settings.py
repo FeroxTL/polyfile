@@ -1,20 +1,28 @@
 import sys
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+from environ import environ
+
 PROJECT_DIR = Path(__file__).resolve().parent
 BASE_DIR = PROJECT_DIR.parent
 
+env = environ.Env(
+    DEBUG=(bool, True),
+    ENVFILE=(str, BASE_DIR / '.env'),
+    ALLOWED_HOSTS=(list, []),
+    INTERNAL_IPS=(list, ['127.0.0.1'])
+)
+
+environ.Env.read_env(env('ENVFILE'))
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m'
+SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 TESTING = 'test' in sys.argv
-ALLOWED_HOSTS = []
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+INTERNAL_IPS = env.list('INTERNAL_IPS')
 
 # Application definition
 
@@ -63,35 +71,44 @@ AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-PASSWORD_RESET_FORM_TIMEOUT = 10 * 24 * 60 * 60  # 3 days
+# When reset password form can be submitted again for user
+PASSWORD_RESET_FORM_TIMEOUT = env.int(
+    'PASSWORD_RESET_FORM_TIMEOUT',
+    10 * 24 * 60 * 60  # 3 days
+)
 
-EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
-# CELERY_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-CELERY_EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-# EMAIL_HOST = ''
-# EMAIL_PORT = ''
-# EMAIL_HOST_USER = ''
-# EMAIL_HOST_PASSWORD = ''
-# EMAIL_USE_TLS = ''
-# EMAIL_USE_SSL = ''
-# EMAIL_TIMEOUT = ''
+DEFAULT_EMAIL_BACKEND = \
+    'django.core.mail.backends.filebased.EmailBackend' if DEBUG else 'djcelery_email.backends.CeleryEmailBackend'
+EMAIL_BACKEND = env.str('EMAIL_BACKEND', DEFAULT_EMAIL_BACKEND)
+DEFAULT_CELERY_EMAIL_BACKEND = \
+    'django.core.mail.backends.filebased.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
+CELERY_EMAIL_BACKEND = env.str('CELERY_EMAIL_BACKEND', DEFAULT_CELERY_EMAIL_BACKEND)
 
-EMAIL_FILE_PATH = '/tmp/app-messages'
+# smtp.EmailBackend
+EMAIL_HOST = env.str('EMAIL_HOST', 'localhost')
+EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_USER = env.str('EMAIL_HOST_USER', '')
+EMAIL_PORT = env.int('EMAIL_PORT', 25)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', False)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', False)
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', None)
+
+# filebased.EmailBackend
+EMAIL_FILE_PATH = env.str('EMAIL_FILE_PATH', '/tmp/app-messages')
 
 
 # Celery
-CELERY_BROKER_URL = 'redis://localhost/0'
-CELERY_RESULT_BACKEND = 'redis://localhost/0'
+CELERY_BROKER_URL = env.str('CELERY_BROKER_URL', 'redis://localhost/0')
+CELERY_RESULT_BACKEND = env.str('CELERY_RESULT_BACKEND', 'redis://localhost/0')
 
 
 # Axes
-AXES_ENABLED = True
-AXES_FAILURE_LIMIT = 3
+AXES_ENABLED = env.bool('LOGIN_PROTECTION_ENABLED', True)
+AXES_FAILURE_LIMIT = env.int('LOGIN_PROTECTION_FAILURE_LIMIT', 3)
 AXES_LOCKOUT_TEMPLATE = 'accounts/errors/account_is_locked.html'
 
 
 # Webpack
-
 WEBPACK_LOADER = {
   'DEFAULT': {
     'CACHE': not DEBUG,
@@ -123,12 +140,9 @@ WSGI_APPLICATION = 'app.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-
+DEFAULT_DATABASE = 'sqlite:///{}'.format(BASE_DIR / 'db.sqlite3')
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db('DATABASE_URL', DEFAULT_DATABASE),
 }
 
 
@@ -164,13 +178,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = env.str('STATIC_URL', '/static/')
 MEDIA_URL = '/media/'
 STATICFILES_DIRS = (
     PROJECT_DIR / 'static',
     BASE_DIR / 'web_dev_assets',
 )
-STATIC_ROOT = BASE_DIR / 'collected_static'
+STATIC_ROOT = env.str('STATIC_ROOT', None)
 
 
 # Default primary key field type
@@ -180,7 +194,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Debug toolbar
-ENABLE_DEBUG_TOOLBAR = DEBUG and not TESTING
+ENABLE_DEBUG_TOOLBAR = env.bool('ENABLE_DEBUG_TOOLBAR', DEBUG and not TESTING)
 if ENABLE_DEBUG_TOOLBAR:
     INSTALLED_APPS.append('debug_toolbar')
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
