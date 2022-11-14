@@ -59,20 +59,20 @@ class NodeCreateSerializer(NodeSerializer):
             raise exceptions.ValidationError({'detail': str(e)})
 
         content_type, _ = mimetypes.guess_type(str(file))
-        node = Node(
+        node, created = Node.objects.get_or_create(
             name=file.name,
-            file_type=Node.FileTypeChoices.FILE,
-            size=file.size,
-            mimetype=get_mimetype(content_type),
             parent=parent_node,
-            file=file,
             data_library=library,
+            defaults=dict(
+                file_type=Node.FileTypeChoices.FILE,
+                size=file.size,
+                mimetype=get_mimetype(content_type),
+                file=file,
+            ),
         )
 
-        if Node.objects.filter(name=node.name, parent=node.parent, data_library=node.data_library).exists():
+        if not created:
             raise exceptions.ValidationError(f'File with name {node.name} already exists', code='unique')
-
-        node.save()
 
         return node
 

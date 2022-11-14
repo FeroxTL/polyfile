@@ -55,7 +55,7 @@ Settings
 
 ..  confval:: ALLOWED_HOSTS
     :type: list
-    :default: []
+    :default: [localhost]
 
     List of allowed hosts, set your host for production
 

@@ -9,7 +9,7 @@ BASE_DIR = PROJECT_DIR.parent
 env = environ.Env(
     DEBUG=(bool, True),
     ENVFILE=(str, BASE_DIR / '.env'),
-    ALLOWED_HOSTS=(list, []),
+    ALLOWED_HOSTS=(list, ['localhost']),
     INTERNAL_IPS=(list, ['127.0.0.1'])
 )
 
