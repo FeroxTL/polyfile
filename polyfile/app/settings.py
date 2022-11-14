@@ -202,3 +202,11 @@ if ENABLE_DEBUG_TOOLBAR:
 DEBUG_TOOLBAR_CONFIG = {
     'SHOW_COLLAPSED': True,
 }
+
+if TESTING:
+    WEBPACK_LOADER = {
+        'DEFAULT': {
+            'CACHE': False,
+            'LOADER_CLASS': 'app.utils.tests.TestWebpackLoader',
+        },
+    }
