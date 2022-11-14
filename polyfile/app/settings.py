@@ -13,14 +13,13 @@ env = environ.Env(
     INTERNAL_IPS=(list, ['127.0.0.1'])
 )
 
-environ.Env.read_env(env('ENVFILE'))
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 TESTING = 'test' in sys.argv
+if not TESTING:
+    environ.Env.read_env(env('ENVFILE'))
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 INTERNAL_IPS = env.list('INTERNAL_IPS')
 
@@ -185,7 +184,9 @@ STATICFILES_DIRS = (
     BASE_DIR / 'web_dev_assets',
 )
 STATIC_ROOT = env.str('STATIC_ROOT', None)
-
+GUNICORN_BIND = env.str('GUNICORN_BIND', 'unix:/tmp/gunicorn.sock')
+NGINX_MAX_BODY_SIZE = env.str('NGINX_MAX_BODY_SIZE', '100m')
+NGINX_PROXY_PASS = env.str('NGINX_PROXY_PASS', 'http://{}'.format(GUNICORN_BIND))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

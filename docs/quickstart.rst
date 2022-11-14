@@ -1,7 +1,7 @@
 Quickstart
 ===========
 
-See :doc:`installation` for dependencies
+See :doc:`installation` for installing dependencies
 
 
 Loading settings
@@ -14,12 +14,13 @@ You can pass settings using environment variables, for example
     (.venv)$ DEBUG=False SECRET_KEY=foo_bar_baz ./manage.py runserver
 
 
-You can also make :code:`.env` file in root project directory:
+You can also create :code:`.env` file in :code:`BASEDIR` directory:
 
 .. code-block:: text
 
     DEBUG=False
     SECRET_KEY=foo_bar_baz
+    ALLOWED_HOSTS=localhost,example.com
 
 .. code-block:: console
 
@@ -33,19 +34,19 @@ You can also make :code:`.env` file in root project directory:
 Settings
 ------------------------------
 
+:code:`BASEDIR` is directory, that contains :code:`manage.py` file
+
 ..  confval:: DEBUG
     :type: bool
     :default: True
 
     Enable debugging tools (debug templates and development server). Never set to True production
 
-
 ..  confval:: SECRET_KEY
     :type: str
     :default: django-insecure
 
     Set to unique string on production, do not use default value. Keep it secret, do not store in public repositories
-
 
 ..  confval:: ENVFILE
     :type: str
@@ -180,6 +181,23 @@ Settings
 
     Enable Debug Toolbar, always enabled in DEBUG mode
 
+..  confval:: GUNICORN_BIND
+    :type: str
+    :default: unix:/tmp/gunicorn.sock
+
+    Maximum allowed size of the client request body
+..  confval:: NGINX_MAX_BODY_SIZE
+    :type: str
+    :default: 100m
+
+    Maximum allowed size of the client request body
+
+..  confval:: NGINX_PROXY_PASS
+    :type: str
+    :default: http:// + GUNICORN_BIND
+
+    Protocol and address of a proxied server and an optional URI to which a location should be mapped
+
 
 Running development server
 ------------------------------
@@ -232,3 +250,36 @@ There is requirements file for testing and coverage. Then run test or coverage:
     (.venv)$ make test
     (.venv)$ make test TEST=app.tests.TestAccounts
     (.venv)$ make coverage
+
+
+Deploying to production
+------------------------------
+
+The recommended way is to use nginx and gunicorn:
+
+.. code-block:: console
+
+    install packages
+
+    # apt install nginx python3-gunicorn
+
+    Generate default configuration for nginx
+
+    (.venv)$ python ./manage.py gen_config nginx > /etc/nginx/conf.d/polyfile.conf
+    (.venv)$ systemctl nginx reload
+
+
+Set :code:`STATIC_ROOT` (for example :code:`/var/www/static/`) setting and collect static files
+
+.. code-block:: console
+
+    (.venv)$ python ./manage.py collectstatic
+
+Set up gunicorn server:
+
+.. code-block:: console
+
+    (.venv)$ python ./manage.py gen_config gunicorn > /var/www/gunicorn.conf.py
+    (.venv)$ python3 -m gunicorn --conf=/var/www/gunicorn.conf.py
+
+Navigate to http://localhost
