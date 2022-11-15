@@ -248,7 +248,7 @@ There is requirements file for testing and coverage. Then run test or coverage:
 
     (.venv)$ pip install -r dev-requirements.txt
     (.venv)$ make test
-    (.venv)$ make test TEST=app.tests.TestAccounts
+    (.venv)$ make test TEST=accounts.tests.TestAccounts
     (.venv)$ make coverage
 
 

@@ -5,6 +5,7 @@ from django.contrib.auth.views import (
 from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
+from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 from django.utils.translation import gettext as _
 
@@ -13,10 +14,12 @@ from app.forms import CustomAuthenticationForm, CustomPasswordResetForm, CustomS
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(cache_page(60 * 5), name='dispatch')
 class IndexView(TemplateView):
     template_name = 'accounts/index.html'
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
     form_class = CustomAuthenticationForm
@@ -30,6 +33,7 @@ class CustomLoginView(LoginView):
         return super().get_context_data(**kwargs)
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class CustomPasswordResetView(PasswordResetView):
     template_name = 'accounts/password_reset/password_reset_form.html'
     form_class = CustomPasswordResetForm
@@ -49,15 +53,18 @@ class CustomPasswordResetView(PasswordResetView):
         return super().form_valid(form)
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = 'accounts/password_reset/password_reset_confirm.html'
     form_class = CustomSetPasswordForm
     action_title = _('Change my password')
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class CustomPasswordResetDoneView(PasswordResetDoneView):
     template_name = 'accounts/password_reset/password_reset_done.html'
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = 'accounts/password_reset/password_reset_complete.html'
