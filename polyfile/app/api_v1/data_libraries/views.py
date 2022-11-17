@@ -258,7 +258,7 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
 
         try:
             return FileResponse(
-                instance.file.open('rb'),  # todo: use sendfile, that is really slow
+                instance.file.open('rb'),
                 content_type=instance.get_mimetype(),
                 headers={'Last-Modified': http_date(instance.updated_at.timestamp())}
             )
