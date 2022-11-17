@@ -42,8 +42,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Mimetype',
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=256, verbose_name='Mimetype')),
+                ('name', models.CharField(max_length=256, verbose_name='Mimetype', primary_key=True)),
             ],
             options={
                 'verbose_name': 'Mime type',

@@ -6,14 +6,14 @@ from PIL import Image
 from django.core.exceptions import ValidationError
 from django.core.files.temp import NamedTemporaryFile
 from django.core.files.uploadedfile import UploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from accounts.factories import SuperuserFactory
 from app.utils.tests import TestProvider, with_tempdir, AdminTestCase
 from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory, AltNodeFactory, \
     ImageFactory
-from storage.models import Node, DataSource, AltNode
+from storage.models import Node, DataSource, AltNode, Mimetype
 from storage.thumbnailer import Thumbnailer
 from storage.utils import get_node_by_path, get_node_queryset
 
@@ -388,3 +388,21 @@ class ThumbnailTestCase(TestCase):
         thumbnailer.default_formats = []
         with self.assertRaises(Exception):
             thumbnailer.get_thumbnail(node=image_node, thumb_size=(40, 40))
+
+
+class MimetypeTestCase(TestCase):
+    @override_settings(CACHES={
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    })
+    def test_mimetype_cache(self):
+        with self.assertNumQueries(4):
+            # select, savepoint, insert, release
+            mimetype, created = Mimetype.objects.get_or_create(name='foo/bar')
+        self.assertTrue(created)
+
+        with self.assertNumQueries(0):
+            mimetype, created = Mimetype.objects.get_or_create(name='foo/bar')
+
+        self.assertFalse(created)

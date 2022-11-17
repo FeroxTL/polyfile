@@ -259,7 +259,7 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
         try:
             return FileResponse(
                 instance.file.open('rb'),
-                content_type=instance.get_mimetype(),
+                content_type=instance.mimetype_id or 'application/octet-stream',
                 headers={'Last-Modified': http_date(instance.updated_at.timestamp())}
             )
         except (ValueError, OSError):  # file.open failed

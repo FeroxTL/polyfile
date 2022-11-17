@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -16,8 +17,10 @@ env = environ.Env(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 TESTING = 'test' in sys.argv
+NORMAL_RUNNING = os.getenv('WSGI_SERVER') or 'runserver' in sys.argv
 if not TESTING:
     environ.Env.read_env(env('ENVFILE'))
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
@@ -210,4 +213,10 @@ if TESTING:
             'CACHE': False,
             'LOADER_CLASS': 'app.utils.tests.TestWebpackLoader',
         },
+    }
+
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
     }

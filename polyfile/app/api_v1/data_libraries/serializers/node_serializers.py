@@ -33,7 +33,7 @@ class NodeSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_has_preview(instance: Node):
-        return thumbnailer.can_get_thumbnail(mimetype=instance.get_mimetype())
+        return thumbnailer.can_get_thumbnail(mimetype=instance.mimetype_id)
 
 
 class NodeCreateSerializer(NodeSerializer):

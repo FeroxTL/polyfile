@@ -47,7 +47,7 @@ class Thumbnailer:
 
     def get_thumbnail(self, node: Node, thumb_size: typing.Tuple[int, int]) -> ThumbnailResult:
         """Get thumbnail from Node."""
-        if not self.can_get_thumbnail(node.get_mimetype()) or not self.default_formats:
+        if not self.can_get_thumbnail(node.mimetype_id) or not self.default_formats:
             raise ThumbnailException('Can not create thumbnail')
 
         file_io = BytesIO()

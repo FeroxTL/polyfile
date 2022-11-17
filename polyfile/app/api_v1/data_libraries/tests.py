@@ -137,7 +137,7 @@ class NodeTests(APITestCase):
                 'size': current_node.size,
                 'name': current_node.name,
                 'mimetype': current_node.mimetype and current_node.mimetype.name,
-                'has_preview': thumbnailer.can_get_thumbnail(current_node.get_mimetype()),
+                'has_preview': thumbnailer.can_get_thumbnail(current_node.mimetype_id),
             },
             'library': {
                 'data_source': current_node.data_library.data_source.pk,
@@ -146,7 +146,7 @@ class NodeTests(APITestCase):
             },
             'nodes': [{
                 'file_type': child.file_type,
-                'has_preview': thumbnailer.can_get_thumbnail(current_node.get_mimetype()),
+                'has_preview': thumbnailer.can_get_thumbnail(current_node.mimetype_id),
                 'mimetype': child.mimetype and child.mimetype.name,
                 'size': child.size,
                 'name': child.name,
@@ -343,6 +343,7 @@ class NodeTests(APITestCase):
         data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
         url = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         image = Image.new('RGB', (100, 100))
+        thumbnailer.available_mimetypes = ['image/jpeg']
 
         with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
             image.save(temp_file)
@@ -457,6 +458,9 @@ class AltNodeTestCase(APITestCase):
 
     @with_tempdir
     def test_image_thumbnail(self, temp_dir):
+        thumbnailer.setup()
+        self.assertTrue('image/jpeg' in thumbnailer.available_mimetypes)
+
         data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
         with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
             image = Image.new("RGB", size=(50, 50), color=(255, 0, 0))
@@ -473,8 +477,8 @@ class AltNodeTestCase(APITestCase):
             '50x50',
         )
         response = self.client.get(url)
-        self.assertTrue(AltNode.objects.filter(node=file_node).exists())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(AltNode.objects.filter(node=file_node).exists())
         self.assertEqual(response.headers['Content-Type'], 'image/jpeg')
         alt_node = AltNode.objects.filter(node=file_node).get()
         self.assertEqual(response.headers['Content-Disposition'], f'inline; filename="{Path(alt_node.file.name).name}"')
@@ -504,6 +508,7 @@ class AltNodeTestCase(APITestCase):
     @with_tempdir
     def test_invalid_image(self, temp_dir):
         """Make thumbnail with invalid image data."""
+        thumbnailer.available_mimetypes = ['image/jpeg']
         data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
         with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
             temp_file.write(b'foobar')

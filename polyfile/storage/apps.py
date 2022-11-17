@@ -1,10 +1,12 @@
 from django.apps import AppConfig
+from django.conf import settings
 
 
 class StorageConfig(AppConfig):
     name = 'storage'
 
-    def ready(self):
+    def ready(self):  # noqa
         from storage.thumbnailer import thumbnailer
 
-        thumbnailer.setup()
+        if settings.NORMAL_RUNNING:
+            thumbnailer.setup()

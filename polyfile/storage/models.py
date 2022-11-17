@@ -3,6 +3,7 @@ import uuid
 from urllib.parse import urlencode
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.urls import reverse
@@ -102,9 +103,22 @@ class DataLibrary(models.Model):
         return self.name
 
 
+class MimetypeManager(models.Manager):
+    def _get_key(self, value):
+        return '{}:{}'.format(self.model.__name__, value)
+
+    def get_or_create(self, name: str, **kwargs):
+        key = self._get_key(name)
+        instance, created = cache.get(key), False
+        if instance is None:
+            instance, created = super().get_or_create(name=name, **kwargs)
+            cache.set(key, instance, 300)
+        return instance, created
+
+
 class Mimetype(models.Model):
-    id = models.AutoField(primary_key=True)
     name = models.CharField(
+        primary_key=True,
         verbose_name='Mimetype',
         max_length=256,
     )
@@ -113,7 +127,7 @@ class Mimetype(models.Model):
         verbose_name = 'Mime type'
         verbose_name_plural = 'Mime types'
 
-    objects = models.Manager()
+    objects = MimetypeManager()
 
     def __str__(self):
         return self.name
@@ -144,7 +158,8 @@ class AbstractNode(models.Model):
         abstract = True
 
     DoesNotExist: typing.Type[ObjectDoesNotExist]
-    data_library_id: int
+    data_library_id: typing.Optional[int]
+    mimetype_id: typing.Optional[str]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -165,11 +180,6 @@ class AbstractNode(models.Model):
     @property
     def url(self):
         raise NotImplementedError
-
-    def get_mimetype(self) -> str:
-        if self.mimetype is not None:
-            return self.mimetype.name
-        return 'application/octet-stream'
 
     def is_node_cls(self):
         return isinstance(self, Node)
