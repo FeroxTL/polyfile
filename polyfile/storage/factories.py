@@ -6,12 +6,7 @@ from factory.django import DjangoModelFactory
 
 from accounts.factories import UserFactory
 from app.utils.tests import TestProvider
-from storage.models import DataSource, DataLibrary, Mimetype, Node, DataSourceOption, AltNode
-
-
-class DataSourceOptionFactory(DjangoModelFactory):
-    class Meta:
-        model = DataSourceOption
+from storage.models import DataSource, DataLibrary, Mimetype, Node, AltNode
 
 
 class DataSourceFactory(DjangoModelFactory):
@@ -19,15 +14,6 @@ class DataSourceFactory(DjangoModelFactory):
         model = DataSource
 
     data_provider_id = TestProvider.provider_id
-
-    @factory.post_generation
-    def options(self, create, extracted, **kwargs):
-        if not create:
-            return
-
-        if extracted:
-            for key, value in extracted.items():
-                DataSourceOptionFactory(data_source=self, key=key, value=value)
 
 
 class MimeTypeFactory(DjangoModelFactory):

@@ -65,18 +65,16 @@ class DataSourceAdminTest(AdminTestCase):
         response = self.client.post(url, {
             'name': 'FooBar',
             'data_provider_id': TestProvider.provider_id,
-            **self.get_options({
+            'options': self.get_options({
                 'foo': 'bar',
-                'bar': 'baz',
-                '': '',
-            }, delete_list_keys=['bar']),
+            }),
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(DataSource.objects.count(), 1)
         data_source = DataSource.objects.get()
         self.assertEqual(data_source.name, 'FooBar')
         self.assertEqual(data_source.data_provider_id, TestProvider.provider_id)
-        self.assertDictEqual(data_source.options_dict, {'foo': 'bar'})
+        self.assertDictEqual(data_source.options, {'foo': 'bar'})
 
         url = reverse('admin:storage_datasource_changelist')
         response = self.client.get(url)
@@ -89,7 +87,7 @@ class DataSourceAdminTest(AdminTestCase):
         response = self.client.post(url, {
             'name': 'FooBar',
             'data_provider_id': TestProvider.provider_id,
-            **self.get_options({}),
+            'options': self.get_options({'foo': 'bar'}),
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(DataSource.objects.count(), 1)
@@ -102,7 +100,7 @@ class DataSourceAdminTest(AdminTestCase):
         data = {
             'name': '',
             'data_provider_id': TestProvider.provider_id,
-            **self.get_options({
+            'options': self.get_options({
                 'foo': 'bar',
             }),
         }
@@ -111,38 +109,22 @@ class DataSourceAdminTest(AdminTestCase):
         form = response.context['adminform']
         self.assertTrue('name' in form.errors)
 
-        # valid data, invalid options ("foo" value is blank)
-        data = {
-            'name': 'FooBar',
-            'data_provider_id': TestProvider.provider_id,
-            **self.get_options({'foo': ''}),
-        }
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 200)
-
-        formset = response.context['inline_admin_formsets'][0]
-        self.assertEqual(len(formset.forms), 1)
-        form = formset.forms[0]
-        self.assertEqual(len(form.errors), 1)
-        self.assertTrue('value' in form.errors)
-
         # invalid value in options
         data = {
             'name': 'FooBar',
             'data_provider_id': TestProvider.provider_id,
-            **self.get_options({'foo': 'bar'}),
+            'options': "foobar",
         }
-        with mock.patch.object(TestProvider, 'validate_options') as p:
+        with mock.patch.object(TestProvider, 'transform_options') as p:
             p.side_effect = ValidationError({'foo': 'foo is invalid'})
             response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
 
         form = response.context['adminform']
-        self.assertEqual(len(form.errors), 0)
-        self.assertEqual(len(response.context['inline_admin_formsets']), 1)
-        formset = response.context['inline_admin_formsets'][0]
-        self.assertEqual(len(formset.forms), 1)
-        self.assertListEqual(formset.non_form_errors(), ['foo: foo is invalid'])
+        self.assertEqual(len(form.errors), 1)
+        self.assertDictEqual(form.errors, {
+            'options': ['Enter a valid JSON.', 'foo: foo is invalid']
+        })
 
 
 class DataLibraryAdminTest(TestCase):

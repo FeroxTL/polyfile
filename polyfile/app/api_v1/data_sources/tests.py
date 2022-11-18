@@ -60,7 +60,7 @@ class DataSourceTests(APITestCase):
         ds = DataSource.objects.get()
         self.assertEqual(ds.name, 'Foo')
         self.assertEqual(ds.data_provider_id, TestProvider.provider_id)
-        self.assertDictEqual(ds.options_dict, {'foo': 'bar'})
+        self.assertDictEqual(ds.options, {'foo': 'bar'})
 
         # no such data_provider_id
         data = {
@@ -116,7 +116,7 @@ class DataSourceTests(APITestCase):
 
         self.assertEqual(response.status_code, 201)
         ds = DataSource.objects.get()
-        self.assertDictEqual(ds.options_dict, {'foo': 'bar'})
+        self.assertDictEqual(ds.options, {'foo': 'bar'})
 
     def test_data_source_update(self):
         # put

@@ -1,3 +1,4 @@
+import json
 import tempfile
 from functools import wraps
 from pathlib import Path
@@ -58,21 +59,5 @@ class AdminTestCase(TestCase):
         self.client.force_login(self.user, backend='django.contrib.auth.backends.ModelBackend')
 
     @staticmethod
-    def get_options(options: dict, delete_list_keys: list = None):
-        result_options = {}
-        delete_list_keys = delete_list_keys or []
-
-        for i, key in enumerate(options.keys()):
-            result_options[f'options-{i}-key'] = key
-            result_options[f'options-{i}-value'] = options[key]
-            if key in delete_list_keys:
-                result_options[f'options-{i}-DELETE'] = 1
-
-        result = {
-            'options-TOTAL_FORMS': len(options),
-            'options-INITIAL_FORMS': 0,
-            'options-MIN_NUM_FORMS': 0,
-            'id_options-MAX_NUM_FORMS': 1000,
-            **result_options
-        }
-        return result
+    def get_options(options: dict):
+        return json.dumps(options)

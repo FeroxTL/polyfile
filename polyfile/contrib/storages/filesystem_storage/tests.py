@@ -13,7 +13,9 @@ from storage.factories import DataLibraryFactory, FileFactory
 
 
 class FileSystemStorageAdminTests(AdminTestCase):
-    """File storage admin tests"""
+    """File storage admin tests."""
+    maxDiff = None
+
     @with_tempdir
     def test_create_storage(self, temp_dir):
         url = reverse('admin:storage_datasource_add')
@@ -23,29 +25,24 @@ class FileSystemStorageAdminTests(AdminTestCase):
         form = response.context['adminform']
         self.assertTrue('name' in form.errors)
         self.assertTrue('data_provider_id' in form.errors)
-        formset = response.context['inline_admin_formsets'][0]
-        self.assertEqual(len(formset.forms), 0)
 
         # invalid options
         response = self.client.post(url, {
             'name': 'FooBar',
             'data_provider_id': FileSystemStorageProvider.provider_id,
-            **self.get_options({
-                'foo': 'bar',
-            }),
+            'options': self.get_options({'foo': 'bar'}),
         })
 
         form = response.context['adminform']
-        self.assertEqual(form.errors, {})
-        formset = response.context['inline_admin_formsets'][0]
-        self.assertEqual(len(formset.forms), 1)
-        self.assertListEqual(formset.non_form_errors(), ['root_directory: This field is required.'])
+        self.assertEqual(form.errors, {
+            'options': ['root_directory: This field is required.']
+        })
 
         # valid options
         response = self.client.post(url, {
             'name': 'FooBar',
             'data_provider_id': FileSystemStorageProvider.provider_id,
-            **self.get_options({
+            'options': self.get_options({
                 'root_directory': temp_dir,
             }),
         })
@@ -57,18 +54,17 @@ class FileSystemStorageAdminTests(AdminTestCase):
         response = self.client.post(url, {
             'name': 'FooBar',
             'data_provider_id': FileSystemStorageProvider.provider_id,
-            **self.get_options({
-                'root_directory': dne_path,
+            'options': self.get_options({
+                'root_directory': str(dne_path),
             }),
         })
 
         form = response.context['adminform']
-        self.assertEqual(form.errors, {})
-        formset = response.context['inline_admin_formsets'][0]
-        self.assertEqual(len(formset.forms), 1)
-        self.assertListEqual(formset.non_form_errors(), [
-            f'root_directory: "{dne_path}" is not directory or does not exist'
-        ])
+        self.assertEqual(form.errors, {
+            'options': [
+                f'root_directory: "{dne_path}" is not directory or does not exist'
+            ]
+        })
 
 
 class FileSystemStorageProviderTests(TestCase):

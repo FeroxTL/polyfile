@@ -33,6 +33,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(primary_key=True, serialize=False, db_index=True)),
                 ('name', models.CharField(max_length=255, verbose_name='Data source name')),
                 ('data_provider_id', models.CharField(max_length=255, verbose_name='Data provider')),
+                ('options', models.JSONField(default=dict, blank=True, null=False)),
             ],
             options={
                 'verbose_name': 'Data source',
@@ -67,15 +68,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Node',
                 'verbose_name_plural': 'Nodes',
             },
-        ),
-        migrations.CreateModel(
-            name='DataSourceOption',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('key', models.CharField(max_length=64)),
-                ('value', models.CharField(max_length=512)),
-                ('data_source', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='options', to='storage.datasource')),
-            ],
         ),
         migrations.CreateModel(
             name='AltNode',

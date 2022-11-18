@@ -59,10 +59,6 @@ class BaseProvider(ABC):
             raise ValidationError(form.errors)
         return form.cleaned_data
 
-    @classmethod
-    def validate_options(cls, options: dict):
-        return cls.transform_options(options)
-
 
 class ProviderRegister:
     TypeBaseProvider = typing.Type[BaseProvider]

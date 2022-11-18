@@ -33,41 +33,21 @@ class DataSource(models.Model):
         max_length=255,
         verbose_name='Data provider',
     )
+    options = models.JSONField(blank=True, null=False, default=dict)
 
     class Meta:
         verbose_name = 'Data source'
         verbose_name_plural = 'Data sources'
 
     objects = CacheManager()
-    options: models.QuerySet
+    options: dict
 
     def __str__(self):
         return self.name or '<empty name>'
 
-    @property
-    def options_dict(self) -> dict:
-        return dict(self.options.values_list('key', 'value'))
-
     def get_provider(self, node: typing.Optional['Node'] = None) -> BaseProvider:
         provider_class = get_data_provider_class(self.data_provider_id)
-        return provider_class(options=self.options_dict, node=node)
-
-
-class DataSourceOption(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    key = models.CharField(max_length=64)
-    value = models.CharField(max_length=512)
-    data_source = models.ForeignKey(
-        DataSource,
-        on_delete=models.CASCADE,
-        related_name='options',
-        blank=False, null=False,
-    )
-
-    objects = models.Manager()
-
-    def __str__(self):
-        return f'{self.key}: {self.value}'
+        return provider_class(options=self.options, node=node)
 
 
 class DataLibrary(models.Model):

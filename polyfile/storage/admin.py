@@ -3,21 +3,35 @@ from functools import partial
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm, ChoiceField
+from django.forms import ChoiceField
 from django_cte import With
 
 from storage.base_data_provider import provider_registry
-from storage.models import DataLibrary, DataSource, DataSourceOption, Node, Mimetype, get_data_provider_class, AltNode
+from storage.models import DataLibrary, DataSource, Node, Mimetype, AltNode, get_data_provider_class
 from storage.utils import get_node_queryset, make_node_cte
 
 admin.site.register(Mimetype)
 
 
-class DataSourceAdminForm(ModelForm):
+class MySONField(forms.JSONField):
+    def bound_data(self, data, initial):
+        if data in self.empty_values and self.required:
+            return self.empty_value
+        return super().bound_data(data=data, initial=initial)
+
+
+class DataSourceAdminForm(forms.ModelForm):
     data_provider_id = ChoiceField(
         choices=[],  # filled later in __init__
         label='Data provider',
     )
+    options = MySONField(
+        required=True,
+    )
+
+    class Meta:
+        model = DataSource
+        fields = forms.ALL_FIELDS
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,41 +42,24 @@ class DataSourceAdminForm(ModelForm):
         if self.instance.pk is not None:
             self.fields['data_provider_id'].disabled = True
 
-
-class CompositionElementFormSet(forms.BaseInlineFormSet):
     def clean(self):
-        super().clean()
-
-        if not hasattr(self, 'cleaned_data'):
-            # invalid form data
-            return
-
-        data_provider_id = self.instance.data_provider_id
-        options = {}
-        for data in self.cleaned_data:
-            if all(map(lambda x: x in data, ['DELETE', 'key', 'value', 'data_source'])):
-                # skip deleting fields
-                if data['DELETE']:
-                    continue
-
-                options[data['key']] = data['value']
+        data_provider_id = self.cleaned_data.get('data_provider_id')
+        options = self.cleaned_data.get('options', {})
+        if not data_provider_id:
+            return super().clean()
 
         data_provider = get_data_provider_class(data_provider_id)
         try:
-            data_provider.validate_options(options=options)
+            data_provider.transform_options(options=options)
         except ValidationError as e:
             message_list = [
                 f'{key}: {error}'
                 for key, error_list in e.message_dict.items()
                 for error in error_list
             ]
-            raise ValidationError(message_list)
+            raise ValidationError({'options': message_list})
 
-
-class DataSourceOptionAdmin(admin.TabularInline):
-    model = DataSourceOption
-    formset = CompositionElementFormSet
-    extra = 1
+        return super().clean()
 
 
 @admin.register(DataSource)
@@ -70,7 +67,6 @@ class DataSourceAdmin(admin.ModelAdmin):
     readonly_fields = ['id']
     list_display = ['name', 'data_provider_id']
     form = DataSourceAdminForm
-    inlines = [DataSourceOptionAdmin]
 
 
 @admin.register(DataLibrary)

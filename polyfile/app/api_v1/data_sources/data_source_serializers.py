@@ -1,19 +1,8 @@
-from django.db import transaction, models
 from rest_framework import serializers
 
 from app.utils.models import get_field
 from storage.base_data_provider import provider_registry
-from storage.models import DataSource, DataSourceOption
-
-
-class DatasourceDictField(serializers.DictField):
-    def to_representation(self, value):
-        iterable = value.all() if isinstance(value, models.Manager) else value
-
-        return {
-            item.key: item.value
-            for item in iterable
-        }
+from storage.models import DataSource
 
 
 class DataSourceSerializer(serializers.ModelSerializer):
@@ -22,8 +11,6 @@ class DataSourceSerializer(serializers.ModelSerializer):
         label=get_field(DataSource, 'data_provider_id').verbose_name,
         choices=[],  # filled in __init__
     )
-    # todo: nobody cares about key:value length (it is limited by DataSourceOption.key and .value)
-    options = DatasourceDictField(required=True)
 
     class Meta:
         model = DataSource
@@ -49,20 +36,8 @@ class DataSourceSerializer(serializers.ModelSerializer):
 
         if data_provider_id and provider_registry.has_provider(data_provider_id):
             provider_cls = provider_registry.get_provider(data_provider_id)
-            provider_cls.validate_options(options=attrs)
+            provider_cls.transform_options(options=attrs)
         return attrs
-
-    def create(self, validated_data):
-        options = validated_data.pop('options', None)
-        with transaction.atomic():
-            self.instance = DataSource.objects.create(**validated_data)
-
-            data_sources = [
-                DataSourceOption(key=key, value=value, data_source=self.instance)
-                for key, value in options.items()
-            ]
-            DataSourceOption.objects.bulk_create(data_sources)
-        return self.instance
 
 
 class DataSourceUpdateSerializer(DataSourceSerializer):
@@ -74,21 +49,5 @@ class DataSourceUpdateSerializer(DataSourceSerializer):
     def validate_options(self, attrs):
         data_provider_id = self.instance.data_provider_id
         provider_cls = provider_registry.get_provider(data_provider_id)
-        provider_cls.validate_options(options=attrs)
+        provider_cls.transform_options(options=attrs)
         return attrs
-
-    def update(self, instance: DataSource, validated_data):
-        options = validated_data.pop('options', None)
-
-        with transaction.atomic():
-            if options is not None:
-                data_sources = [
-                    DataSourceOption(key=key, value=value, data_source=instance)
-                    for key, value in options.items()
-                ]
-                instance.options.all().delete()
-                DataSourceOption.objects.bulk_create(data_sources)
-
-            super().update(instance, validated_data=validated_data)
-
-        return instance

@@ -3,14 +3,10 @@ from pathlib import Path
 from django.core.exceptions import ValidationError
 from django.forms import forms, fields
 
-from app.utils.models import get_field
-from storage.models import DataSourceOption
-
 
 class FileStorageForm(forms.Form):
     root_directory = fields.CharField(
         required=True,
-        max_length=get_field(DataSourceOption, 'value').max_length,
         label='Root directory',
         help_text='Root directory on server. Must exist',
     )
