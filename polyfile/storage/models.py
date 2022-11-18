@@ -3,12 +3,12 @@ import uuid
 from urllib.parse import urlencode
 
 from django.conf import settings
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.urls import reverse
 from django_cte import CTEManager
 
+from app.utils.managers import CacheManager
 from storage.base_data_provider import BaseProvider, provider_registry
 from storage.fields import DynamicStorageFileField
 
@@ -23,7 +23,7 @@ class DataSource(models.Model):
 
     Only admins can set up this.
     """
-    id = models.BigAutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True, db_index=True)
     name = models.CharField(
         verbose_name='Data source name',
         max_length=255,
@@ -38,7 +38,7 @@ class DataSource(models.Model):
         verbose_name = 'Data source'
         verbose_name_plural = 'Data sources'
 
-    objects = models.Manager()
+    objects = CacheManager()
     options: models.QuerySet
 
     def __str__(self):
@@ -74,6 +74,7 @@ class DataLibrary(models.Model):
     """Endpoint, that connects user to DataSource."""
     id = models.UUIDField(
         primary_key=True,
+        db_index=True,
         default=uuid.uuid4,
     )
     name = models.CharField(
@@ -103,37 +104,26 @@ class DataLibrary(models.Model):
         return self.name
 
 
-class MimetypeManager(models.Manager):
-    def _get_key(self, value):
-        return '{}:{}'.format(self.model.__name__, value)
-
-    def get_or_create(self, name: str, **kwargs):
-        key = self._get_key(name)
-        instance, created = cache.get(key), False
-        if instance is None:
-            instance, created = super().get_or_create(name=name, **kwargs)
-            cache.set(key, instance, 300)
-        return instance, created
-
-
 class Mimetype(models.Model):
     name = models.CharField(
         primary_key=True,
         verbose_name='Mimetype',
         max_length=256,
+        db_index=True,
     )
 
     class Meta:
         verbose_name = 'Mime type'
         verbose_name_plural = 'Mime types'
 
-    objects = MimetypeManager()
+    objects = CacheManager(cache_fields=['name', 'pk'])
 
     def __str__(self):
         return self.name
 
 
 class AbstractNode(models.Model):
+    id = models.BigAutoField(primary_key=True, db_index=True)
     file = DynamicStorageFileField(
         upload_to=DynamicStorageFileField.default_upload_to,  # required for django migrations
         blank=True,
@@ -187,7 +177,6 @@ class AbstractNode(models.Model):
 
 class Node(AbstractNode):
     """File or directory."""
-    id = models.BigAutoField(primary_key=True)
     name = models.CharField(
         verbose_name='Name',
         max_length=255,
@@ -260,7 +249,6 @@ class Node(AbstractNode):
 
 class AltNode(AbstractNode):
     """Alternative version of Node."""
-    id = models.BigAutoField(primary_key=True)
     node = models.ForeignKey(
         Node,
         related_name='alt_nodes',

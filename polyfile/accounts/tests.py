@@ -4,13 +4,13 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib import auth
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.timezone import now
 from rest_framework import status
 
 from accounts.factories import UserFactory
-from accounts.models import ResetPasswordAttempt
+from accounts.models import ResetPasswordAttempt, User
 
 
 class TestAccounts(TestCase):
@@ -122,3 +122,21 @@ class TestAccounts(TestCase):
         response = self.client.post(url, data_reset_password)
         self.assertRedirects(response, r_url)
         self.assertEqual(len(mail.outbox), 2)
+
+    @override_settings(CACHES={
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    })
+    def test_mimetype_cache(self):
+        user = UserFactory()
+
+        with self.assertNumQueries(1):
+            User.objects.get(pk=user.pk)
+
+        with self.assertNumQueries(0):
+            User.objects.get(pk=user.pk)
+
+        user.save()
+        with self.assertNumQueries(1):
+            User.objects.get(pk=user.pk)

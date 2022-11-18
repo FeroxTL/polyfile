@@ -74,7 +74,7 @@ def get_node_by_path(
         library: DataLibrary,
         path: str,
         last_node_type: typing.Optional[str] = None,
-        strict: bool = False
+        strict: bool = False,
 ) -> typing.Optional[Node]:
     """
     Get node by path in root directory.
@@ -100,6 +100,7 @@ def get_node_by_path(
 
     node_cte_qs = get_node_queryset(cte=cte).filter(path=path)
     node = node_cte_qs.get()
+    node.data_library = library
 
     if last_node_type is not None and last_node_type != node.file_type:
         raise Node.DoesNotExist('Incorrect node type')

@@ -305,7 +305,9 @@ class DataLibraryAltView(DataLibraryDownloadView):
             raise exceptions.NotFound('?v= is required')
 
         try:
-            return AltNode.objects.get(node=node, version=version)
+            alt_node = AltNode.objects.get(node=node, version=version)
+            alt_node.data_library = node.data_library
+            return alt_node
         except AltNode.DoesNotExist:
             try:
                 return self.get_image_thumbnail(node=node)

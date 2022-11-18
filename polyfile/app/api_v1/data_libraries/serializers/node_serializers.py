@@ -13,7 +13,7 @@ from storage.utils import get_node_by_path, adapt_path, get_mimetype
 
 
 class NodeSerializer(serializers.ModelSerializer):
-    mimetype = serializers.ReadOnlyField(source='mimetype.name', default=None)
+    mimetype = serializers.ReadOnlyField(source='mimetype_id', default=None)
     has_preview = serializers.SerializerMethodField()
 
     class Meta:
