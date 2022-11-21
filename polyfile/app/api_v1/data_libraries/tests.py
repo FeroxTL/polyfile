@@ -476,7 +476,7 @@ class AltNodeTestCase(APITestCase):
             reverse('api_v1:lib-alt', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'}),
             '50x50',
         )
-        with self.assertNumQueries(13):  # todo: wtf must be lower
+        with self.assertNumQueries(10):
             response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(AltNode.objects.filter(node=file_node).exists())
@@ -486,7 +486,7 @@ class AltNodeTestCase(APITestCase):
         self.assertTrue(len(response.getvalue()) > 100)
 
         # Also valid request -- must be cached
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(5):
             response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

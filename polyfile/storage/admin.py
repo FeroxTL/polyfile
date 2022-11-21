@@ -95,10 +95,6 @@ class NodeAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return get_node_queryset().select_related('data_library')
 
-    def delete_model(self, request, obj):
-        obj.file.delete()
-        super().delete_model(request, obj)
-
     def delete_queryset(self, request, queryset):
         for instance in queryset:
             instance.file.delete()
@@ -122,10 +118,6 @@ class AltNodeAdmin(admin.ModelAdmin):
         instance = super().get_object(request, object_id, from_field)
         instance.path = self.get_node_path(instance.node)
         return instance
-
-    def delete_model(self, request, obj):
-        obj.file.delete()
-        super().delete_model(request, obj)
 
     def delete_queryset(self, request, queryset):
         for instance in queryset:

@@ -154,6 +154,10 @@ class AbstractNode(models.Model):
     def is_node_cls(self):
         return isinstance(self, Node)
 
+    def delete(self, using=None, keep_parents=False):
+        self.file.delete()
+        super().delete(using=using, keep_parents=keep_parents)
+
 
 class Node(AbstractNode):
     """File or directory."""

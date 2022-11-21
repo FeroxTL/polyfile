@@ -294,7 +294,7 @@ class AltNodeAdminTest(AdminTestCase):
         response = self.client.post(url, data={'post': 'yes'})
         self.assertTrue(response.status_code, 301)
         self.assertFalse(AltNode.objects.filter(pk=alt_file_node.pk).exists())
-        self.assertFalse(Path(alt_file_node.file.file.file.name).exists())
+        self.assertFalse(Path(alt_file_node.file.file.file.name).exists(), 'AltNode.file exists after instance removal')
 
         # remove queryset
         with NamedTemporaryFile() as temp_file:

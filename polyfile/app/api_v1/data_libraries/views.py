@@ -236,7 +236,7 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
     queryset = Node.objects.none()
 
     def get_library(self, lib_id: UUID) -> DataLibrary:
-        return DataLibrary.objects.get(owner=self.request.user, id=lib_id)
+        return DataLibrary.objects.select_related('data_source').get(owner=self.request.user, id=lib_id)
 
     def get_object(self):
         path = self.kwargs['path']
@@ -285,7 +285,7 @@ class DataLibraryAltView(DataLibraryDownloadView):
             node=node,
             defaults=dict(
                 mimetype=mimetype,
-                data_library_id=node.data_library_id,
+                data_library=node.data_library,
                 file=InMemoryUploadedFile(
                     file=thumbnail.file,
                     field_name=None,
