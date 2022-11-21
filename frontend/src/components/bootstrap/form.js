@@ -5,7 +5,7 @@ import m from "mithril";
 //todo: deprecated; use FormInput or FormAutoField
 const RawFormInput = {
   view: function (vnode) {
-    let {oninput, labelText, value, helpText, id} = vnode.attrs;
+    let {oninput, labelText, value, helpText, id, errorList} = vnode.attrs;
     id = id || getRandomString();
     return (
       m("div.mb-3", [
@@ -14,7 +14,9 @@ const RawFormInput = {
           id: id,
           oninput: oninput,
           value: value,
+          class: Array.isArray(errorList) && errorList.length > 0 ? "is-invalid" : undefined,
         }),
+        errorList && errorList.map((text) => m("div.invalid-feedback.d-block", text)),
         helpText && m("div.form-text", helpText)
       ])
     )

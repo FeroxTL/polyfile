@@ -66,6 +66,12 @@ Settings
 
     Internal ips for development (DEBUG_TOOLBAR)
 
+..  confval:: DISABLE_CACHE
+    :type: list
+    :default: False
+
+    Disable django cache
+
 ..  confval:: PASSWORD_RESET_FORM_TIMEOUT
     :type: int
     :default: (3 days)

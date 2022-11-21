@@ -1,4 +1,3 @@
-# todo: make errors in one style maybe {"message": "error message"}
 import re
 import typing
 from uuid import UUID
@@ -56,6 +55,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
     lookup_url_kwarg = 'lib_id'
     serializer_class = data_library_serializers.DataLibrarySerializer
+    queryset = Node.objects.none()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -70,31 +70,31 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         try:
             return get_node_by_path(library=self.library, path=path)
         except Node.DoesNotExist as e:
-            raise Http404(str(e))
+            raise exceptions.NotFound(e)
 
-    @staticmethod
-    def get_child_nodes(parent_node: Node) -> typing.Iterable[Node]:
-        if parent_node.file_type == Node.FileTypeChoices.FILE:
+    def get_child_nodes(self, parent_node: typing.Optional[Node]) -> typing.Iterable[Node]:
+        if parent_node is None:
+            qs = Node.objects.filter(parent__isnull=True, data_library=self.library)
+        elif parent_node.file_type == Node.FileTypeChoices.FILE:
             return [parent_node]
         else:
-            return parent_node.get_children().select_related('mimetype').annotate(
-                relevancy=Case(
-                    When(file_type=Node.FileTypeChoices.DIRECTORY, then=2),
-                    When(file_type=Node.FileTypeChoices.FILE, then=1),
-                    output_field=models.IntegerField()
-                )
-            ).order_by('-relevancy', 'name')
+            qs = parent_node.get_children().select_related('mimetype')
+
+        return qs.annotate(
+            relevancy=Case(
+                When(file_type=Node.FileTypeChoices.DIRECTORY, then=2),
+                When(file_type=Node.FileTypeChoices.FILE, then=1),
+                output_field=models.IntegerField()
+            )
+        )
 
     def retrieve(self, request, *args, **kwargs):
         current_node = self.get_object()
-        if current_node is None:
-            child_nodes = Node.objects.filter(parent__isnull=True, data_library=self.library)
-        else:
-            child_nodes = self.get_child_nodes(current_node)
+        child_nodes = self.get_child_nodes(current_node)
 
         return Response({
             'library': data_library_serializers.DataLibrarySerializer(self.library).data,
-            'current_node': node_serializers.NodeSerializer(current_node).data,
+            'current_node': node_serializers.NodeSerializer(current_node).data if current_node else {},
             'nodes': node_serializers.NodeSerializer(child_nodes, many=True).data,
         })
 
@@ -166,7 +166,7 @@ class NodeUploadFileView(generics.CreateAPIView):
             lib_id = self.kwargs[self.lookup_url_kwarg]
             return self.get_queryset().get(id=lib_id)
         except DataLibrary.DoesNotExist as e:
-            raise exceptions.NotFound(str(e))
+            raise exceptions.ValidationError(e)
 
     def get_serializer_context(self):
         library = self.get_object()
@@ -206,18 +206,16 @@ class DataLibraryDeleteNodeView(generics.DestroyAPIView):
         library = get_object_or_404(queryset, **filter_kwargs)
 
         try:
-            node = get_node_by_path(library=library, path=path)
-            if node is None:
-                raise Node.DoesNotExist
+            node = get_node_by_path(library=library, path=path, strict=True)
 
             if node.is_directory and node.get_children_count():
-                raise exceptions.ParseError(
+                raise exceptions.ValidationError(
                     f'Can not remove "{node.name}": is not empty'
                 )
 
             return node
         except Node.DoesNotExist as e:
-            raise Http404(str(e))
+            raise exceptions.NotFound(e)
 
     @transaction.atomic
     def perform_destroy(self, instance):
@@ -239,19 +237,17 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
         return DataLibrary.objects.select_related('data_source').get(owner=self.request.user, id=lib_id)
 
     def get_object(self):
-        path = self.kwargs['path']
-
         try:
             library = self.get_library(self.kwargs[self.lookup_url_kwarg])
             instance = get_node_by_path(
                 library=library,
-                path=path,
+                path=self.kwargs['path'],
                 last_node_type=Node.FileTypeChoices.FILE,
                 strict=True
             )
             return instance
         except (Node.DoesNotExist, DataLibrary.DoesNotExist) as e:
-            raise exceptions.NotFound(str(e))
+            raise exceptions.NotFound(e)
 
     def retrieve(self, request, *args, **kwargs):
         instance: AbstractNode = self.get_object()

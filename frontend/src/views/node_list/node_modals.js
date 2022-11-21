@@ -5,14 +5,30 @@ import {modal} from "../../components/bootstrap/modal";
 import {RawFormInput} from "../../components/bootstrap/form";
 
 
+
+function ErrorList() {
+  this._errors = {};
+
+  Object.defineProperty(this, 'nonFieldErrors', {
+    get: () => (Array.isArray(this._errors) ? this._errors : [])
+  });
+
+  this.getErrors = (name) => (this._errors[name]);
+  this.setErrors = (errors) => {this._errors = errors};
+  this.reset = () => {this._errors = {}};
+}
+
+
 function showCreateDirectoryModal(lib_id, path) {
   path = path || "/";
 
   let nodeFormData = {
+    errors: new ErrorList(),
     instance: {
       name: "",
     },
     save: function () {
+      this.errors.reset();
       return (
         m.request({
           method: "POST",
@@ -23,7 +39,7 @@ function showCreateDirectoryModal(lib_id, path) {
             'X-CSRFToken': getCookie('csrftoken'),
           }
         }).then((data) => {
-          globalNodesData.addNode(new Node({library: globalNodesData.library, path: path,  ...data}));
+          globalNodesData.addNode(new Node({library: globalNodesData.library, path: path, ...data}));
           return data;
         })
       )
@@ -34,6 +50,8 @@ function showCreateDirectoryModal(lib_id, path) {
     e.preventDefault();
     nodeFormData.save().then(() => {
       modal.close();
+    }, (error) => {
+      nodeFormData.errors.setErrors(error.response);
     });
   }
 
@@ -41,6 +59,9 @@ function showCreateDirectoryModal(lib_id, path) {
     view: function () {
       return (
         m("form", {onsubmit: formSubmit}, [
+          nodeFormData.errors.nonFieldErrors.map((error) => (
+            m("div.alert alert-danger", error)
+          )),
           m("div.mb-3", [
             m(RawFormInput, {
               labelText: "Name",
@@ -48,6 +69,7 @@ function showCreateDirectoryModal(lib_id, path) {
                 nodeFormData.instance["name"] = e.target.value
               },
               value: nodeFormData.instance["name"],
+              errorList: nodeFormData.errors.getErrors("name"),
             })
           ]),
         ])

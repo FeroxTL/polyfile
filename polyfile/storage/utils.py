@@ -90,12 +90,11 @@ def get_node_by_path(
     """
     cte = With.recursive(partial(make_node_cte, base_queryset=Node.cte_objects.filter(data_library=library)))
 
-    # todo: remove adapt_path by modifying urls.py?
     path = adapt_path(path)
 
     if not path:
         if strict:
-            raise Node.DoesNotExist
+            raise Node.DoesNotExist('Node matching query does not exist.')
         return None
 
     node_cte_qs = get_node_queryset(cte=cte).filter(path=path)

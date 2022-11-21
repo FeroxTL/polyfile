@@ -83,10 +83,21 @@ class DataLibraryAdmin(admin.ModelAdmin):
             provider.init_library(library=obj)
 
 
+class NodeAdminForm(forms.ModelForm):
+    class Meta:
+        model = Node
+        fields = forms.ALL_FIELDS
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['parent'].required = False
+
+
 @admin.register(Node)
 class NodeAdmin(admin.ModelAdmin):
     raw_id_fields = ['parent']
     list_display = ['name', 'file_type']
+    form = NodeAdminForm
 
     list_filter = [
         ('parent', admin.EmptyFieldListFilter),

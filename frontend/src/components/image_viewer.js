@@ -146,7 +146,7 @@ function showImageViewer({currentNode, nodeList = []} = {}) {
         hasManyImages ? [
           m("div.carousel-inner h-100", nodeList.map(image => (
             m("div.carousel-item h-100 text-center", {...dragOptions, class: image === currentNode ? "active" : null},
-              m("img.h-100 gallery-image gallery-image-transitions", this.getImageOptions(image))
+              image === currentNode ? m("img.h-100 gallery-image gallery-image-transitions", this.getImageOptions(image)) : null
             )
           ))),
           m("button.carousel-control-prev h-100[type=button]", {onclick: this.onSelectPrev.bind(null, currentNode)}, [
@@ -192,7 +192,7 @@ function showImageViewer({currentNode, nodeList = []} = {}) {
             currentIndex !== null && m(
               "span.navbar-text me-auto gallery-title",
               `${currentIndex + 1} / ${nodeList.length} | ${currentNode.name}`
-            ),
+            ) || currentNode.name,
             m("ul.navbar-nav", [
               m(NavLiItem, {onclick: this.resetZoom.bind(null)}, m("i.fa-solid fa-down-left-and-up-right-to-center")),
               m(NavLiItem, {onclick: this.setZoom.bind(null, 0.5)}, m("i.fa-solid fa-magnifying-glass-plus")),

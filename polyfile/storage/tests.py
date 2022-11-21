@@ -206,7 +206,7 @@ class NodeAdminTest(AdminTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             set(response.context['adminform'].errors.keys()),
-            {'name', 'size', 'data_library', 'file_type', 'parent'}
+            {'name', 'size', 'data_library', 'file_type'}
         )
 
         # valid data

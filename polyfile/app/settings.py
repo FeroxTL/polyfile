@@ -25,6 +25,7 @@ if not TESTING:
 SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 INTERNAL_IPS = env.list('INTERNAL_IPS')
+DISABLE_CACHE = env.bool('DISABLE_CACHE', False)
 
 # Application definition
 
@@ -68,7 +69,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'app.urls'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
-APPEND_SLASH = False
+APPEND_SLASH = True
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
@@ -113,13 +114,19 @@ AXES_LOCKOUT_TEMPLATE = 'accounts/errors/account_is_locked.html'
 # Webpack
 WEBPACK_LOADER = {
   'DEFAULT': {
-    'CACHE': not DEBUG,
     'BUNDLE_DIR_NAME': 'bundles/',
-    'STATS_FILE': PROJECT_DIR.parent / 'webpack-stats.json',
+    'STATS_FILE': BASE_DIR / 'webpack-stats.json',
     'POLL_INTERVAL': 0.3,
     'IGNORE': [r'.+\.hot-update.js', r'.+\.map'],
   }
 }
+
+
+# Rest framework api
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'app.utils.handlers.api_exception_handler',
+}
+
 
 TEMPLATES = [
     {
@@ -215,6 +222,7 @@ if TESTING:
         },
     }
 
+if TESTING or DISABLE_CACHE:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',

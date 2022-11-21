@@ -61,6 +61,7 @@ class LibraryTests(APITestCase):
         self.client.logout()
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+        self.assertListEqual(response.json(), ['Authentication credentials were not provided.'])
 
     def test_update_library(self):
         """Ensure we can update our libraries."""
@@ -273,7 +274,7 @@ class NodeTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertListEqual(response.json(), [
-            f'File "/{data["name"]}" already exists',
+            f'Directory "{data["name"]}" already exists',
         ])
 
         # mkdir with invalid name
@@ -287,7 +288,7 @@ class NodeTests(APITestCase):
         data = {'name': 'FooBar'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
+        self.assertListEqual(response.json(), ['Node matching query does not exist.'])
 
         # anonymous mkdir
         self.client.logout()
@@ -317,13 +318,13 @@ class NodeTests(APITestCase):
         # rm already removed directory
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Not found.'})
+        self.assertListEqual(response.json(), ['Node matching query does not exist.'])
 
         # rm root directory
         url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
-        self.assertDictEqual(response.json(), {'detail': 'Not found.'})
+        self.assertListEqual(response.json(), ['Node matching query does not exist.'])
 
         # rm not empty directory
         directory = DirectoryFactory(data_library=data_library)
@@ -331,7 +332,7 @@ class NodeTests(APITestCase):
         url = reverse('api_v1:lib-rm', kwargs={'lib_id': str(data_library.pk), 'path': '/' + directory.name + '/'})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertDictEqual(response.json(), {'detail': f'Can not remove "{directory.name}": is not empty'})
+        self.assertListEqual(response.json(), [f'Can not remove "{directory.name}": is not empty'])
 
         # anonymous rm
         self.client.logout()
@@ -365,7 +366,7 @@ class NodeTests(APITestCase):
             response = self.client.post(url, {'file': temp_file}, format='multipart')
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
             self.assertListEqual(response.json(), [
-                f'File with name {Path(temp_file.name).name} already exists',
+                f'File "{Path(temp_file.name).name}" already exists',
             ])
 
         # library does not exist
@@ -373,8 +374,8 @@ class NodeTests(APITestCase):
         with tempfile.NamedTemporaryFile(suffix='.jpg') as temp_file:
             image.save(temp_file)
             response = self.client.post(url_lib_dne, {'file': temp_file}, format='multipart')
-            self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code, response.data)
-            self.assertDictEqual(response.json(), {'detail': 'DataLibrary matching query does not exist.'})
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+        self.assertListEqual(response.json(), ['DataLibrary matching query does not exist.'])
 
         # path does not exist
         url_path_dne = reverse('api_v1:lib-upload', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist/'})
@@ -382,8 +383,8 @@ class NodeTests(APITestCase):
             image.save(temp_file)
             temp_file.seek(0)
             response = self.client.post(url_path_dne, {'file': temp_file}, format='multipart')
-            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
-            self.assertDictEqual(response.json(), {'detail': 'Node matching query does not exist.'})
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+        self.assertListEqual(response.json(), ['Node matching query does not exist.'])
 
         # target path is not directory
         target_node = FileFactory(data_library=data_library)
@@ -392,8 +393,8 @@ class NodeTests(APITestCase):
             image.save(temp_file)
             temp_file.seek(0)
             response = self.client.post(url_nad, {'file': temp_file}, format='multipart')
-            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
-            self.assertDictEqual(response.json(), {'detail': 'Incorrect node type'})
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code, response.data)
+        self.assertListEqual(response.json(), ['Incorrect node type'])
 
         # anonymous file upload
         self.client.logout()
@@ -431,12 +432,13 @@ class NodeTests(APITestCase):
             'api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node_no_file.name}'})
         response = self.client.get(no_file_url)
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.json(), {'detail': 'A server error occurred.'})
+        self.assertListEqual(response.json(), ['A server error occurred.'])
 
         # Node does not exists
         url_dne = reverse('api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': '/does-not-exist'})
         response = self.client.get(url_dne)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertListEqual(response.json(), ['Node matching query does not exist.'])
 
         # Root node
         url_dne = reverse('api_v1:lib-download', kwargs={'lib_id': str(data_library.pk), 'path': '/'})
@@ -494,7 +496,7 @@ class AltNodeTestCase(APITestCase):
         url = reverse('api_v1:lib-alt', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file_node.name}'})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json(), {'detail': '?v= is required'})
+        self.assertListEqual(response.json(), ['?v= is required'])
 
         # Invalid url -- invalid version
         url = '{}?v={}'.format(
@@ -531,4 +533,4 @@ class AltNodeTestCase(APITestCase):
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'detail': 'Can not open thumbnail'})
+        self.assertListEqual(response.json(), ['Can not open thumbnail'])

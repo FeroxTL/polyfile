@@ -9,7 +9,7 @@ from app.utils.models import get_field
 
 from storage.models import Node
 from storage.thumbnailer import thumbnailer
-from storage.utils import get_node_by_path, adapt_path, get_mimetype
+from storage.utils import get_node_by_path, get_mimetype
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -26,7 +26,7 @@ class NodeSerializer(serializers.ModelSerializer):
             'has_preview',
         ]
         read_only_fields = [
-            'name',
+            'mimetype',
             'file_type',
             'size',
         ]
@@ -43,6 +43,7 @@ class NodeCreateSerializer(NodeSerializer):
         fields = [
             'file',
         ] + NodeSerializer.Meta.fields
+        read_only_fields = NodeSerializer.Meta.read_only_fields + ['name']
 
     def create(self, validated_data: dict):
         file: UploadedFile = validated_data['file']
@@ -55,8 +56,7 @@ class NodeCreateSerializer(NodeSerializer):
                 last_node_type=Node.FileTypeChoices.DIRECTORY,
             )
         except Node.DoesNotExist as e:
-            # todo one style for all errors
-            raise exceptions.ValidationError({'detail': str(e)})
+            raise exceptions.ValidationError(e)
 
         content_type, _ = mimetypes.guess_type(str(file))
         node, created = Node.objects.get_or_create(
@@ -72,7 +72,10 @@ class NodeCreateSerializer(NodeSerializer):
         )
 
         if not created:
-            raise exceptions.ValidationError(f'File with name {node.name} already exists', code='unique')
+            raise exceptions.ValidationError(
+                f'{node.get_file_type_display()} "{node.name}" already exists',
+                code='unique'
+            )
 
         return node
 
@@ -137,27 +140,7 @@ class NodeMoveSerializer(serializers.ModelSerializer):
         return self.instance
 
 
-class NodeRenameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Node
-        fields = [
-            'name',
-            'file_type',
-            'created_at',
-            'updated_at',
-            'size',
-        ]
-        read_only_fields = [
-            'id',
-            'file_type',
-            'created_at',
-            'updated_at',
-            'size',
-        ]
-
-
-class MkDirectorySerializer(NodeSerializer):
-    """Create directory node in library."""
+class NodeRenameSerializer(NodeSerializer):
     name = serializers.CharField(
         allow_null=False,
         allow_blank=False,
@@ -172,6 +155,9 @@ class MkDirectorySerializer(NodeSerializer):
             raise exceptions.ValidationError('This name is invalid')
         return name
 
+
+class MkDirectorySerializer(NodeRenameSerializer):
+    """Create directory node in library."""
     @transaction.atomic
     def create(self, validated_data):
         library, path, name = itemgetter('library', 'path', 'name')(validated_data)
@@ -188,7 +174,9 @@ class MkDirectorySerializer(NodeSerializer):
 
         node, created = Node.objects.get_or_create(parent=parent_node, **params)
         if not created:
-            raise exceptions.ValidationError(f'File "{adapt_path(path)}/{name}" already exists')
-            # todo: one style exceptions
+            raise exceptions.ValidationError(
+                f'{node.get_file_type_display()} "{node.name}" already exists',
+                code='unique'
+            )
 
         return node
