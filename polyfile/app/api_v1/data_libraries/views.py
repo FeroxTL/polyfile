@@ -6,7 +6,6 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction, models
 from django.db.models import Case, When
 from django.http import Http404, FileResponse
-from django.utils import timezone
 from django.utils.http import http_date
 from rest_framework import generics, permissions, exceptions, serializers
 from rest_framework.generics import get_object_or_404
@@ -141,10 +140,6 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
             'path': self.kwargs['path'],
         })
         return context
-
-    def perform_update(self, serializer):
-        """Update a model instance."""
-        serializer.save(updated_at=timezone.now())
 
 
 class DataLibraryNodeRenameView(generics.UpdateAPIView):

@@ -3,6 +3,7 @@ from operator import itemgetter
 
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction, IntegrityError
+from django.utils import timezone
 from rest_framework import serializers, exceptions
 
 from app.utils.models import get_field
@@ -111,7 +112,6 @@ class NodeMoveSerializer(serializers.ModelSerializer):
             'size',
         ]
 
-    # @transaction.atomic
     def update(self, instance: Node, validated_data):
         """Move file or directory to target location."""
         source_node = instance
@@ -133,8 +133,9 @@ class NodeMoveSerializer(serializers.ModelSerializer):
 
         try:
             source_node.parent = target_directory
+            source_node.updated_at = timezone.now()
             with transaction.atomic():
-                source_node.save(update_fields=['parent'])  # todo: update fields
+                source_node.save(update_fields=['parent', 'updated_at'])
         except IntegrityError:
             raise exceptions.ValidationError(
                 f'Can not move {source_node.name}: {source_node.get_file_type_display()} already exists'
