@@ -13,8 +13,9 @@ from storage.utils import get_node_by_path, get_mimetype
 
 
 class NodeSerializer(serializers.ModelSerializer):
+    """Default Node serializer."""
     mimetype = serializers.ReadOnlyField(source='mimetype_id', default=None)
-    has_preview = serializers.SerializerMethodField()
+    has_preview = serializers.SerializerMethodField(method_name='_get_has_preview')
 
     class Meta:
         model = Node
@@ -32,11 +33,12 @@ class NodeSerializer(serializers.ModelSerializer):
         ]
 
     @staticmethod
-    def get_has_preview(instance: Node):
+    def _get_has_preview(instance: Node):
         return thumbnailer.can_get_thumbnail(mimetype=instance.mimetype_id)
 
 
 class NodeCreateSerializer(NodeSerializer):
+    """Create node serializer."""
     file = serializers.FileField(write_only=True)
 
     class Meta(NodeSerializer.Meta):
@@ -46,6 +48,7 @@ class NodeCreateSerializer(NodeSerializer):
         read_only_fields = NodeSerializer.Meta.read_only_fields + ['name']
 
     def create(self, validated_data: dict):
+        """Validate data and create node."""
         file: UploadedFile = validated_data['file']
         library, path = itemgetter('library', 'path')(self.context)
 
@@ -81,6 +84,7 @@ class NodeCreateSerializer(NodeSerializer):
 
 
 class NodeMoveSerializer(serializers.ModelSerializer):
+    """Move Node serializer."""
     target_path = serializers.CharField(required=True, allow_null=False, allow_blank=False, write_only=True)
 
     class Meta:
@@ -104,6 +108,7 @@ class NodeMoveSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance: Node, validated_data):
+        """Move file or directory to target location."""
         # todo
         library, source_path = itemgetter('library', 'path')(self.context)
         target_path = validated_data['target_path']
@@ -141,6 +146,7 @@ class NodeMoveSerializer(serializers.ModelSerializer):
 
 
 class NodeRenameSerializer(NodeSerializer):
+    """Rename node serializer."""
     name = serializers.CharField(
         allow_null=False,
         allow_blank=False,
@@ -151,6 +157,7 @@ class NodeRenameSerializer(NodeSerializer):
 
     @staticmethod
     def validate_name(name: str):
+        """Ensure name is valid."""
         if name in ['.', '..'] or '/' in name:
             raise exceptions.ValidationError('This name is invalid')
         return name
@@ -160,19 +167,20 @@ class MkDirectorySerializer(NodeRenameSerializer):
     """Create directory node in library."""
     @transaction.atomic
     def create(self, validated_data):
+        """Validate data and create instance."""
         library, path, name = itemgetter('library', 'path', 'name')(validated_data)
-        params = dict(
-            name=name,
-            file_type=Node.FileTypeChoices.DIRECTORY,
-            data_library=library,
-        )
 
         try:
             parent_node = get_node_by_path(library=library, path=path)
         except Node.DoesNotExist as e:
             raise exceptions.ParseError(str(e))
 
-        node, created = Node.objects.get_or_create(parent=parent_node, **params)
+        node, created = Node.objects.get_or_create(
+            parent=parent_node,
+            name=name,
+            file_type=Node.FileTypeChoices.DIRECTORY,
+            data_library=library,
+        )
         if not created:
             raise exceptions.ValidationError(
                 f'{node.get_file_type_display()} "{node.name}" already exists',

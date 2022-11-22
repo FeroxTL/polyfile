@@ -2,6 +2,7 @@ from django.forms import forms, fields
 
 
 class S3ValidationForm(forms.Form):
+    """S3 options validation form."""
     endpoint_url = fields.URLField(
         label='Endpoint',
         required=True,

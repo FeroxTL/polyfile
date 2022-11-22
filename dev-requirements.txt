@@ -6,3 +6,4 @@ flake8==4.0.1
 django-debug-toolbar==3.5.0
 sphinx==5.3.0
 sphinx-toolbox==3.2.0
+pydocstyle==6.1.1

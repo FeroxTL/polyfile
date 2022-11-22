@@ -7,7 +7,7 @@ from django.forms import ChoiceField
 from django_cte import With
 
 from storage.base_data_provider import provider_registry
-from storage.models import DataLibrary, DataSource, Node, Mimetype, AltNode, get_data_provider_class
+from storage.models import DataLibrary, DataSource, Node, Mimetype, AltNode
 from storage.utils import get_node_queryset, make_node_cte
 
 admin.site.register(Mimetype)
@@ -48,7 +48,7 @@ class DataSourceAdminForm(forms.ModelForm):
         if not data_provider_id:
             return super().clean()
 
-        data_provider = get_data_provider_class(data_provider_id)
+        data_provider = provider_registry.get_provider(data_provider_id)
         try:
             data_provider.transform_options(options=options)
         except ValidationError as e:

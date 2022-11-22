@@ -5,6 +5,7 @@ from django.forms import forms, fields
 
 
 class FileStorageForm(forms.Form):
+    """FileStorage options validation form."""
     root_directory = fields.CharField(
         required=True,
         label='Root directory',
@@ -12,6 +13,7 @@ class FileStorageForm(forms.Form):
     )
 
     def clean(self):
+        """Validate storage options."""
         root_directory = self.cleaned_data.get('root_directory', None)
         if root_directory is not None:
             root_directory = Path(root_directory)

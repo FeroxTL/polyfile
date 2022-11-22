@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(db_index=True, primary_key=True, serialize=False)),
                 ('attempt_date', models.DateTimeField(auto_now_add=True, verbose_name='Attempt date')),
-                ('expire_date', models.DateTimeField(default=accounts.models.default_reset_expire_date, verbose_name='Expire date', db_index=True)),
+                ('expire_date', models.DateTimeField(default=accounts.models._default_reset_expire_date, verbose_name='Expire date', db_index=True)),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),

@@ -13,10 +13,6 @@ from storage.base_data_provider import BaseProvider, provider_registry
 from storage.fields import DynamicStorageFileField
 
 
-def get_data_provider_class(data_provider_id) -> typing.Type[BaseProvider]:
-    return provider_registry.get_provider(data_provider_id)
-
-
 class DataSource(models.Model):
     """
     Credentials and settings, that applies to DataProvider.
@@ -46,7 +42,8 @@ class DataSource(models.Model):
         return self.name or '<empty name>'
 
     def get_provider(self, node: typing.Optional['Node'] = None) -> BaseProvider:
-        provider_class = get_data_provider_class(self.data_provider_id)
+        """Get provider instance."""
+        provider_class = provider_registry.get_provider(self.data_provider_id)
         return provider_class(options=self.options, node=node)
 
 
@@ -85,6 +82,7 @@ class DataLibrary(models.Model):
 
 
 class Mimetype(models.Model):
+    """File mimetypes."""
     name = models.CharField(
         primary_key=True,
         verbose_name='Mimetype',
@@ -103,6 +101,7 @@ class Mimetype(models.Model):
 
 
 class AbstractNode(models.Model):
+    """Base fields for Node model ancestors."""
     id = models.BigAutoField(primary_key=True, db_index=True)
     file = DynamicStorageFileField(
         upload_to=DynamicStorageFileField.default_upload_to,  # required for django migrations
@@ -137,6 +136,7 @@ class AbstractNode(models.Model):
 
     @property
     def path(self):
+        """Full path in DataLibrary."""
         assert self._path is not None, (
             f'No "path" attribute was provided using annotations '
             f'({self.__class__.__name__}.objects.annotate(...)) or direct assignments.'
@@ -149,12 +149,15 @@ class AbstractNode(models.Model):
 
     @property
     def url(self):
+        """Public url."""
         raise NotImplementedError
 
     def is_node_cls(self):
+        """If instance is Node instance."""
         return isinstance(self, Node)
 
     def delete(self, using=None, keep_parents=False):
+        """Delete associated file while deleting node instance."""
         self.file.delete()
         super().delete(using=using, keep_parents=keep_parents)
 
@@ -214,17 +217,21 @@ class Node(AbstractNode):
 
     @property
     def is_directory(self) -> bool:
+        """Check if node is directory."""
         return self.file_type == self.FileTypeChoices.DIRECTORY
 
     def get_children(self):
+        """Get all child nodes."""
         return Node.objects.filter(parent=self)
 
     def get_children_count(self):
+        """Total child nodes."""
         # todo: really strange thing
         return self.get_children().count()
 
     @property
     def url(self):
+        """Public url."""
         return reverse(
             'api_v1:lib-download',
             kwargs={'lib_id': str(self.data_library_id), 'path': '/' + self.path}
@@ -262,6 +269,7 @@ class AltNode(AbstractNode):
 
     @property
     def url(self):
+        """Public url."""
         url = reverse(
             'api_v1:lib-alt',
             kwargs={'lib_id': str(self.data_library_id), 'path': '/' + self.path}

@@ -8,12 +8,14 @@ from storage.models import DataLibrary, AbstractNode
 
 
 class S3StorageProvider(BaseProvider):
+    """Provider to S3 storages."""
     provider_id = 'MinioStorage'
     verbose_name = 'Minio Storage'
     validation_class = S3ValidationForm
     storage: S3Boto3Storage
 
     def get_storage(self) -> Storage:
+        """Get instance of Storage."""
         options = self.transform_options(self.options)
         if self.node is not None:
             options['bucket_name'] = self._get_user_bucket_name(self.node.data_library_id)
@@ -25,6 +27,7 @@ class S3StorageProvider(BaseProvider):
         return bucket.creation_date is not None
 
     def init_library(self, library: DataLibrary):
+        """Initialize DataLibrary."""
         bucket_name = self._get_user_bucket_name(library.pk)
 
         if not self._is_bucket_exists(bucket_name):
@@ -35,8 +38,10 @@ class S3StorageProvider(BaseProvider):
         return str(library_id)
 
     @staticmethod
-    def get_upload_to(instance: AbstractNode, filename: str):
-        path = [now().strftime('%Y.%m'), filename]
+    def get_upload_to(instance: AbstractNode, filename: str) -> str:
+        """Target upload path."""
+        path = []
         if not instance.is_node_cls():
-            path.insert(0, 'alt')
+            path.append('alt')
+        path.extend([now().strftime('%Y.%m'), filename])
         return '/'.join(path)

@@ -4,6 +4,7 @@ from accounts.models import User
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):
+    """Serializer for current_user view."""
     class Meta:
         model = User
         fields = [

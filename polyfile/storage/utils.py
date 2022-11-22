@@ -9,6 +9,7 @@ from storage.models import Node, DataLibrary, Mimetype
 
 
 def get_mimetype(mtype: str, default='application/octet-stream') -> Mimetype:
+    """Get or create mimetype."""
     mimetype, _ = Mimetype.objects.get_or_create(name=mtype or default)
     return mimetype
 
@@ -35,6 +36,7 @@ def adapt_path(path: str) -> str:
 
 
 def make_node_cte(cte, base_queryset):
+    """Queryset for instance of recursive CTE."""
     # non-recursive: get root nodes
     return base_queryset.filter(
         parent__isnull=True,
@@ -57,6 +59,7 @@ def make_node_cte(cte, base_queryset):
 
 
 def get_node_queryset(cte=None):
+    """Node queryset with CTE."""
     cte = cte or With.recursive(partial(make_node_cte, base_queryset=Node.cte_objects))
 
     node_cte_qs = (
@@ -85,7 +88,7 @@ def get_node_by_path(
     :param strict: raise exception or return None if path is empty
     :return: Node in requested path, None if path is root directory
 
-    Raises:
+    Exceptions:
          Node.DoesNotExist if node is not found.
     """
     cte = With.recursive(partial(make_node_cte, base_queryset=Node.cte_objects.filter(data_library=library)))

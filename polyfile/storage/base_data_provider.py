@@ -11,20 +11,24 @@ if typing.TYPE_CHECKING:
 
 
 class BaseProvider(ABC):
+    """Base class for all data providers."""
     validation_class: forms.Form = forms.Form
 
     @property
     @abstractmethod
     def provider_id(self) -> str:
+        """Return some unique identifier."""
         pass
 
     @property
     @abstractmethod
     def verbose_name(self) -> str:
+        """Return public name."""
         pass
 
     @abstractmethod
     def get_storage(self) -> Storage:
+        """Return an instance of storage."""
         pass
 
     def __init__(self, options: dict, node: typing.Optional['Node'] = None):
@@ -37,10 +41,12 @@ class BaseProvider(ABC):
         return self.verbose_name
 
     def init_library(self, library: 'DataLibrary'):
+        """Initialize DataLibrary."""
         pass
 
     @staticmethod
-    def get_upload_to(instance: 'AbstractNode', filename: str):
+    def get_upload_to(instance: 'AbstractNode', filename: str) -> str:
+        """Target upload path."""
         if instance.is_node_cls():
             path = 'lib_{lib_id}/{dt}/{filename}'
         else:
@@ -61,22 +67,27 @@ class BaseProvider(ABC):
 
 
 class ProviderRegister:
+    """Stores all providers in one place."""
     TypeBaseProvider = typing.Type[BaseProvider]
 
     def __init__(self):
         self._registry = {}
 
     def has_provider(self, provider_id: str):
+        """Check if register has provider."""
         return provider_id in self._registry
 
     def register(self, provider: TypeBaseProvider):
+        """Register provider in register."""
         self._registry[provider.provider_id] = provider
 
     def get_provider(self, provider_id: str) -> TypeBaseProvider:
+        """Retrieve provider."""
         return self._registry[provider_id]
 
     @property
     def providers(self) -> typing.Iterable[TypeBaseProvider]:
+        """Return all registered data providers."""
         return self._registry.values()
 
 

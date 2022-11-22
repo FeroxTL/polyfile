@@ -6,10 +6,11 @@ from storage.base_data_provider import provider_registry
 
 
 class DataProviderList(APIView):
+    """Data provider list with parameters for each one."""
     permission_classes = [permissions.IsAdminUser]
 
     @staticmethod
-    def get_provider_fields(provider_class):
+    def _get_provider_fields(provider_class):
         return [
             {
                 'attribute': key,
@@ -22,14 +23,15 @@ class DataProviderList(APIView):
             for key, field in provider_class.validation_class().fields.items()
         ]
 
-    def get_provider_description(self, provider_class):
+    def _get_provider_data(self, provider_class):
         return {
             'id': provider_class.provider_id,
-            'fields': self.get_provider_fields(provider_class=provider_class)
+            'fields': self._get_provider_fields(provider_class=provider_class)
         }
 
     def get(self, request):
+        """Retrieve provider info."""
         return Response([
-            self.get_provider_description(provider_class=provider_class)
+            self._get_provider_data(provider_class=provider_class)
             for provider_class in provider_registry.providers
         ])

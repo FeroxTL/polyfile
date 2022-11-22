@@ -32,6 +32,7 @@ class DataSourceSerializer(serializers.ModelSerializer):
         ]
 
     def validate_options(self, attrs):
+        """Validate provider options."""
         data_provider_id = self.initial_data.get('data_provider_id')
 
         if data_provider_id and provider_registry.has_provider(data_provider_id):
@@ -47,6 +48,7 @@ class DataSourceUpdateSerializer(DataSourceSerializer):
     )
 
     def validate_options(self, attrs):
+        """Validate provider options."""
         data_provider_id = self.instance.data_provider_id
         provider_cls = provider_registry.get_provider(data_provider_id)
         provider_cls.transform_options(options=attrs)

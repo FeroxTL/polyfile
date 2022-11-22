@@ -9,6 +9,7 @@ from storage.utils import get_mimetype
 
 
 class ThumbnailException(Exception):
+    """Basic exception for thumbnail generation."""
     pass
 
 
@@ -16,6 +17,7 @@ ThumbnailResult = namedtuple('ThumbnailResult', ['file', 'mimetype'])
 
 
 class Thumbnailer:
+    """Thumbnail generator."""
     def __init__(self):
         self._default_formats = []
         self.default_formats = ['JPEG', 'PNG']
@@ -23,6 +25,7 @@ class Thumbnailer:
 
     @property
     def default_formats(self) -> list:
+        """List of formats to use for thumbnail generation."""
         return self._default_formats
 
     @default_formats.setter

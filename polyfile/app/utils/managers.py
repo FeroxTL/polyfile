@@ -3,6 +3,7 @@ from django.db import models
 
 
 class CacheManager(models.Manager):
+    """Simple cache manager."""
     def __init__(self, cache_fields=None, cache_time=300, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cache_fields = cache_fields or ['pk']
@@ -20,6 +21,7 @@ class CacheManager(models.Manager):
                 return kwargs[key]
 
     def get(self, *args, **kwargs):
+        """Cache 'get' call."""
         pk = self._get_cache_value(kwargs)
         key = self._get_cache_key(pk)
 
@@ -34,6 +36,7 @@ class CacheManager(models.Manager):
         return instance
 
     def get_or_create(self, *args, **kwargs):
+        """Cache 'get_or_create' call."""
         pk = self._get_cache_value(kwargs)
         key = self._get_cache_key(pk)
 
@@ -47,5 +50,6 @@ class CacheManager(models.Manager):
         return instance, created
 
     def invalidate_cache_instance(self, pk):
+        """Invalidate cache for instance."""
         key = self._get_cache_key(pk)
         cache.delete(key)

@@ -24,10 +24,12 @@ class DataLibraryListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        """Get the list of items for this view."""
         return DataLibrary.objects.filter(owner=self.request.user)
 
     @transaction.atomic
     def perform_create(self, serializer: serializers.Serializer):
+        """Create a model instance."""
         data_library: DataLibrary = serializer.save(owner=self.request.user)
         provider = data_library.data_source.get_provider()
         provider.init_library(library=data_library)
@@ -42,11 +44,13 @@ class DataLibraryDetailUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
+        """Return the class to use for the serializer."""
         if self.request.method.upper() in ['PUT', 'PATCH']:
             return data_library_serializers.DataLibraryUpdateSerializer
         return data_library_serializers.DataLibrarySerializer
 
     def get_queryset(self):
+        """Get the list of items for this view."""
         return DataLibrary.objects.filter(owner=self.request.user)
 
 
@@ -62,6 +66,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         self.library: typing.Optional[DataLibrary] = None
 
     def get_object(self) -> typing.Optional[Node]:
+        """Return the object the view is displaying."""
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
         filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
@@ -73,6 +78,12 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
             raise exceptions.NotFound(e)
 
     def get_child_nodes(self, parent_node: typing.Optional[Node]) -> typing.Iterable[Node]:
+        """
+        Get child nodes for instance.
+
+        If instance is None return first level nodes of self.library.
+        If instance.file_type is File return itself.
+        """
         if parent_node is None:
             qs = Node.objects.filter(parent__isnull=True, data_library=self.library)
         elif parent_node.file_type == Node.FileTypeChoices.FILE:
@@ -89,6 +100,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
         )
 
     def retrieve(self, request, *args, **kwargs):
+        """Retrieve a model instance."""
         current_node = self.get_object()
         child_nodes = self.get_child_nodes(current_node)
 
@@ -109,6 +121,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
         self.library: typing.Optional[DataLibrary] = None
 
     def get_object(self):
+        """Return the object the view is displaying."""
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
         filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
@@ -120,6 +133,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
             raise Http404(str(e))
 
     def get_serializer_context(self):
+        """Extra context provided to the serializer class."""
         context = super().get_serializer_context()
         context.update({
             'library': self.library,
@@ -128,6 +142,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
         return context
 
     def perform_update(self, serializer):
+        """Update a model instance."""
         serializer.save(updated_at=timezone.now())
 
 
@@ -138,6 +153,7 @@ class DataLibraryNodeRenameView(generics.UpdateAPIView):
     queryset = Node.objects.none()
 
     def get_object(self):
+        """Return the object the view is displaying."""
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
         filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
@@ -159,9 +175,11 @@ class NodeUploadFileView(generics.CreateAPIView):
     lookup_url_kwarg = 'lib_id'
 
     def get_queryset(self):
+        """Get the list of items for this view."""
         return DataLibrary.objects.filter(owner=self.request.user)
 
     def get_object(self) -> DataLibrary:
+        """Return the object the view is displaying."""
         try:
             lib_id = self.kwargs[self.lookup_url_kwarg]
             return self.get_queryset().get(id=lib_id)
@@ -169,6 +187,7 @@ class NodeUploadFileView(generics.CreateAPIView):
             raise exceptions.ValidationError(e)
 
     def get_serializer_context(self):
+        """Extra context provided to the serializer class."""
         library = self.get_object()
         context = super().get_serializer_context()
         context.update({
@@ -185,11 +204,12 @@ class DataLibraryMkdirView(generics.CreateAPIView):
     queryset = Node.objects.none()
     lookup_url_kwarg = 'lib_id'
 
-    def get_library(self, lib_id: UUID) -> DataLibrary:
+    def _get_library(self, lib_id: UUID) -> DataLibrary:
         return DataLibrary.objects.get(owner=self.request.user, id=lib_id)
 
     def perform_create(self, serializer):
-        library = self.get_library(self.kwargs[self.lookup_url_kwarg])
+        """Create a model instance."""
+        library = self._get_library(self.kwargs[self.lookup_url_kwarg])
         serializer.save(library=library, owner=self.request.user, path=self.kwargs['path'])
 
 
@@ -200,6 +220,7 @@ class DataLibraryDeleteNodeView(generics.DestroyAPIView):
     queryset = Node.objects.none()
 
     def get_object(self):
+        """Return the object the view is displaying."""
         path = self.kwargs['path']
         queryset = DataLibrary.objects.filter(owner=self.request.user)
         filter_kwargs = {self.lookup_field: self.kwargs['lib_id']}
@@ -219,6 +240,7 @@ class DataLibraryDeleteNodeView(generics.DestroyAPIView):
 
     @transaction.atomic
     def perform_destroy(self, instance):
+        """Destroy a model instance."""
         # todo: maybe we should mark files as deleted and clean them later
         instance.file.delete()
         alt_nodes_queryset = instance.alt_nodes.all()
@@ -229,16 +251,18 @@ class DataLibraryDeleteNodeView(generics.DestroyAPIView):
 
 
 class DataLibraryDownloadView(generics.RetrieveAPIView):
+    """View for downloading original file of Node instance."""
     lookup_url_kwarg = 'lib_id'
     permission_classes = [permissions.IsAuthenticated]
     queryset = Node.objects.none()
 
-    def get_library(self, lib_id: UUID) -> DataLibrary:
+    def _get_library(self, lib_id: UUID) -> DataLibrary:
         return DataLibrary.objects.select_related('data_source').get(owner=self.request.user, id=lib_id)
 
     def get_object(self):
+        """Return the object the view is displaying."""
         try:
-            library = self.get_library(self.kwargs[self.lookup_url_kwarg])
+            library = self._get_library(self.kwargs[self.lookup_url_kwarg])
             instance = get_node_by_path(
                 library=library,
                 path=self.kwargs['path'],
@@ -250,6 +274,7 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
             raise exceptions.NotFound(e)
 
     def retrieve(self, request, *args, **kwargs):
+        """Retrieve a model instance."""
         instance: AbstractNode = self.get_object()
 
         try:
@@ -263,8 +288,9 @@ class DataLibraryDownloadView(generics.RetrieveAPIView):
 
 
 class DataLibraryAltView(DataLibraryDownloadView):
+    """Alternative versions of Nodes i.e. thumbnails."""
     @staticmethod
-    def _parse_thumb_size(size):
+    def _parse_thumb_size(size: str):
         match = re.match(r'^(\d+)x(\d+)$', size)
         if match:
             return tuple(map(int, match.groups()))
@@ -272,6 +298,7 @@ class DataLibraryAltView(DataLibraryDownloadView):
         raise exceptions.ParseError('?v= is invalid')
 
     def get_image_thumbnail(self, node: Node) -> AltNode:
+        """Get thumbnail of Node and store it in AltNode instance."""
         version = self.request.query_params.get('v')
         thumbnail_size = self._parse_thumb_size(version)
         thumbnail = thumbnailer.get_thumbnail(node=node, thumb_size=thumbnail_size)
@@ -295,6 +322,7 @@ class DataLibraryAltView(DataLibraryDownloadView):
         return instance
 
     def get_object(self):
+        """Return the object the view is displaying."""
         node = super().get_object()
         version = self.request.query_params.get('v')
         if version is None:

@@ -4,7 +4,7 @@ from rest_framework.views import exception_handler
 
 def api_exception_handler(exc, context):
     """
-    Default api exception handler.
+    Handle api exception.
 
     Always return list instead of {detail: ...} dict
     """

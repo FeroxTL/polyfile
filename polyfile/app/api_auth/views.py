@@ -8,7 +8,9 @@ class LogoutView(APIView):
     """Logout user."""
     permission_classes = []
 
-    def post(self, request):
+    @staticmethod
+    def post(request):
+        """Http method for user logout."""
         logout(request)
         return Response({
             'next_url': reverse('index'),

@@ -7,11 +7,13 @@ from contrib.storages.filesystem_storage.forms import FileStorageForm
 
 
 class FileSystemStorageProvider(BaseProvider):
+    """Stores files on disk."""
     provider_id = 'FileStorage'
     verbose_name = 'Disk File Storage'
     validation_class = FileStorageForm
 
     def get_storage(self) -> Storage:
+        """Return an instance of storage."""
         assert 'root_directory' in self.options
         root_directory = Path(self.options['root_directory'])
         return FileSystemStorage(location=root_directory)

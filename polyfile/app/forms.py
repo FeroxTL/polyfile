@@ -4,6 +4,7 @@ from django.utils.translation import gettext as _
 
 
 class Bootstrap5ValidateClass(BaseForm):
+    """Adds bootstrap classes in form fields."""
     @staticmethod
     def _add_class(widget: Widget, cls):
         class_list = set(widget.attrs.get('class', '').split(' '))
@@ -11,6 +12,7 @@ class Bootstrap5ValidateClass(BaseForm):
         widget.attrs['class'] = ' '.join(class_list)
 
     def is_valid(self):
+        """Add some error classes for field widgets."""
         result = super().is_valid()
         for key in self.errors.keys():
             self._add_class(self.fields[key].widget, 'is-invalid')
@@ -18,6 +20,7 @@ class Bootstrap5ValidateClass(BaseForm):
 
 
 class CustomAuthenticationForm(AuthenticationForm):
+    """AuthenticationForm with bootstrap widgets."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['username'].widget.attrs.update({
@@ -35,6 +38,7 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 
 class CustomPasswordResetForm(Bootstrap5ValidateClass, PasswordResetForm):
+    """PasswordResetForm with bootstrap widgets."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['email'].widget.attrs.update({
@@ -46,6 +50,7 @@ class CustomPasswordResetForm(Bootstrap5ValidateClass, PasswordResetForm):
 
 
 class CustomSetPasswordForm(Bootstrap5ValidateClass, SetPasswordForm):
+    """SetPasswordForm with bootstrap widgets."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['new_password1'].widget.attrs.update({
