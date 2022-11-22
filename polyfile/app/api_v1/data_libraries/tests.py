@@ -1,6 +1,7 @@
 import tempfile
 import uuid
 from pathlib import Path
+from uuid import uuid4
 
 from PIL import Image
 from django.core.files.uploadedfile import UploadedFile
@@ -449,6 +450,89 @@ class NodeTests(APITestCase):
         self.client.logout()
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_tempdir
+    def test_node_move(self, temp_dir):
+        """Test node moving."""
+        data_library = DataLibraryFactory(owner=self.user, data_source__options={'location': temp_dir})
+        directory = DirectoryFactory(data_library=data_library)
+        directory2 = DirectoryFactory(parent=directory)
+        file = FileFactory(data_library=data_library)
+
+        # library does not exist
+        url = reverse('api_v1:lib-mv', kwargs={'lib_id': str(uuid4()), 'path': f'/{file.name}'})
+        response = self.client.put(url, data={})
+        self.assertEqual(response.status_code, 404)
+        self.assertListEqual(response.json(), ['No DataLibrary matches the given query.'])
+
+        # Move file to directory
+        url = reverse('api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file.name}'})
+        data = {
+            'target_path': f'/{directory.name}'
+        }
+
+        response = self.client.put(url, data=data)
+        self.assertEqual(response.status_code, 200)
+        directory.refresh_from_db()
+        self.assertEqual(directory.parent, None)
+        file.refresh_from_db()
+        self.assertEqual(file.parent, directory)
+
+        # move file to root directory
+        url = reverse(
+            'api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': f'/{directory.name}/{file.name}'})
+        data = {
+            'target_path': ''
+        }
+
+        response = self.client.put(url, data=data)
+        self.assertEqual(response.status_code, 200)
+        directory.refresh_from_db()
+        self.assertEqual(directory.parent, None)
+        file.refresh_from_db()
+        self.assertEqual(file.parent, None)
+
+        # move file that does not exist
+        url = reverse(
+            'api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': '/foo-bar.txt'})
+        response = self.client.put(url, data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json(), ['Node matching query does not exist.'])
+
+        # move directory to itself
+        url = reverse(
+            'api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': f'/{directory.name}'})
+        response = self.client.put(url, data={'target_path': f'/{directory.name}'})
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json(), [f'Can not move {directory.name} to a subdirectory of itself'])
+
+        # move directory to subdirectory
+        url = reverse(
+            'api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': f'/{directory.name}'})
+        response = self.client.put(url, data={'target_path': f'/{directory.name}/{directory2.name}'})
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json(), [f'Can not move {directory.name} to a subdirectory of itself'])
+
+        # target node is not directory
+        file.parent = None
+        file.save()
+        url = reverse(
+            'api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': f'/{directory.name}'})
+        response = self.client.put(url, data={'target_path': f'/{file.name}'})
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json(), ['Incorrect node type'])
+
+        # move file to directory with file name collusion
+        FileFactory(name=file.name, parent=directory)
+        url = reverse(
+            'api_v1:lib-mv', kwargs={'lib_id': str(data_library.pk), 'path': f'/{file.name}'})
+        response = self.client.put(url, data={'target_path': f'/{directory.name}'})
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json(), [f'Can not move {file.name}: File already exists'])
+
+        self.assertTrue(Node.objects.filter(pk=file.pk).exists())
+        file.refresh_from_db()
+        self.assertEqual(file.parent, None)
 
 
 class AltNodeTestCase(APITestCase):

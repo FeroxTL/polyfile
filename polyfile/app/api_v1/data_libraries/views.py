@@ -115,6 +115,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
     """Move Node."""
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = node_serializers.NodeMoveSerializer
+    queryset = Node.objects.none()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -130,7 +131,7 @@ class DataLibraryNodeMoveView(generics.UpdateAPIView):
         try:
             return get_node_by_path(library=self.library, path=path)
         except Node.DoesNotExist as e:
-            raise Http404(str(e))
+            raise exceptions.ValidationError(e)
 
     def get_serializer_context(self):
         """Extra context provided to the serializer class."""

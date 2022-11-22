@@ -58,7 +58,7 @@ def make_node_cte(cte, base_queryset):
     )
 
 
-def get_node_queryset(cte=None):
+def get_node_queryset(cte=None, order_by='path'):
     """Node queryset with CTE."""
     cte = cte or With.recursive(partial(make_node_cte, base_queryset=Node.cte_objects))
 
@@ -66,7 +66,7 @@ def get_node_queryset(cte=None):
         cte.join(Node.cte_objects.all(), pk=cte.col.pk)
         .with_cte(cte)
         .annotate(path=cte.col.path)
-        .order_by('path')
+        .order_by(order_by)
     )
 
     return node_cte_qs

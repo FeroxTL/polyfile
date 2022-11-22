@@ -104,7 +104,7 @@ class NodeAdmin(admin.ModelAdmin):
     ]
 
     def get_queryset(self, request):
-        return get_node_queryset().select_related('data_library')
+        return get_node_queryset(order_by='id').select_related('data_library')
 
     def delete_queryset(self, request, queryset):
         for instance in queryset:

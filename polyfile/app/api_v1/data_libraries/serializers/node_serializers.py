@@ -2,14 +2,14 @@ import mimetypes
 from operator import itemgetter
 
 from django.core.files.uploadedfile import UploadedFile
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework import serializers, exceptions
 
 from app.utils.models import get_field
 
 from storage.models import Node
 from storage.thumbnailer import thumbnailer
-from storage.utils import get_node_by_path, get_mimetype
+from storage.utils import get_node_by_path, get_mimetype, adapt_path
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -85,7 +85,12 @@ class NodeCreateSerializer(NodeSerializer):
 
 class NodeMoveSerializer(serializers.ModelSerializer):
     """Move Node serializer."""
-    target_path = serializers.CharField(required=True, allow_null=False, allow_blank=False, write_only=True)
+    target_path = serializers.CharField(
+        required=True,
+        allow_null=False,
+        allow_blank=True,
+        write_only=True
+    )
 
     class Meta:
         model = Node
@@ -106,43 +111,36 @@ class NodeMoveSerializer(serializers.ModelSerializer):
             'size',
         ]
 
-    @transaction.atomic
+    # @transaction.atomic
     def update(self, instance: Node, validated_data):
         """Move file or directory to target location."""
-        # todo
+        source_node = instance
         library, source_path = itemgetter('library', 'path')(self.context)
-        target_path = validated_data['target_path']
-        # data_provider = get_data_provider(data_source=library.data_source)
-        # super().update(instance, validated_data)
+        source_path = adapt_path(source_path)
+        target_path = adapt_path(validated_data['target_path'])
+
+        if source_node.is_directory and target_path.startswith(source_path):
+            raise exceptions.ValidationError(f'Can not move {source_node.name} to a subdirectory of itself')
 
         try:
-            source_node = get_node_by_path(library=library, path=source_path)
             target_directory = get_node_by_path(
                 library=library,
                 path=target_path,
                 last_node_type=Node.FileTypeChoices.DIRECTORY
             )
         except Node.DoesNotExist as e:
-            raise exceptions.ValidationError({'path': str(e)})
+            raise exceptions.ValidationError(e)
 
-        print('source:', source_node)
-        print('source parent:', source_node.get_parent())
-        print('target:', target_directory)
+        try:
+            source_node.parent = target_directory
+            with transaction.atomic():
+                source_node.save(update_fields=['parent'])  # todo: update fields
+        except IntegrityError:
+            raise exceptions.ValidationError(
+                f'Can not move {source_node.name}: {source_node.get_file_type_display()} already exists'
+            )
 
-        assert target_directory != source_node.get_parent()
-
-        source_node.move(target_directory, pos='sorted-child')
-
-        # try:
-        #     data_provider.move(
-        #         library=library,
-        #         source_path=path,
-        #         target_directory=target_directory,
-        #     )
-        # except ProviderException as e:
-        #     raise exceptions.ValidationError(e)
-
-        return self.instance
+        return source_node
 
 
 class NodeRenameSerializer(NodeSerializer):
