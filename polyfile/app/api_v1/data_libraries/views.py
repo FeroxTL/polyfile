@@ -97,7 +97,7 @@ class DataLibraryNodeListView(generics.RetrieveAPIView):
                 When(file_type=Node.FileTypeChoices.FILE, then=1),
                 output_field=models.IntegerField()
             )
-        )
+        ).order_by('-relevancy', 'name')
 
     def retrieve(self, request, *args, **kwargs):
         """Retrieve a model instance."""

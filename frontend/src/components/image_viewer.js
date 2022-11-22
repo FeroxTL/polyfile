@@ -104,19 +104,6 @@ function showImageViewer({currentNode, nodeList = []} = {}) {
   };
 
   const ImageView = {
-    getImgStyle: function () {
-      const {x, y, zoom} = dragState;
-      return {
-        "transform": `translate3d(${x}px, ${y}px, 0px) scale3d(${zoom}, ${zoom}, 1)`
-      };
-    },
-    getImageOptions: function (image) {
-      //todo: should load thumbnail based on screen height
-      return {
-        src: image.downloadUrl,
-        style: image === currentNode ? this.getImgStyle() : null,
-      }
-    },
     onSelectNext: function (node, e) {
       e.preventDefault();
 
@@ -138,15 +125,27 @@ function showImageViewer({currentNode, nodeList = []} = {}) {
       dragState.reset();
     },
 
+    view_image: function(image) {
+      const {x, y, zoom} = dragState;
+      return (
+        m("img.h-100 gallery-image gallery-image-transitions", {
+          src: image.downloadUrl,
+          id: image.name,
+          style: {
+            "transform": `translate3d(${x}px, ${y}px, 0px) scale3d(${zoom}, ${zoom}, 1)`
+          },
+        })
+      )
+    },
+
     view: function () {
-      //todo: all images are loading at the same time. Should load only current image?
       const hasManyImages = nodeList.length > 0;
 
       return m("div.carousel slide h-100",
         hasManyImages ? [
           m("div.carousel-inner h-100", nodeList.map(image => (
             m("div.carousel-item h-100 text-center", {...dragOptions, class: image === currentNode ? "active" : null},
-              image === currentNode ? m("img.h-100 gallery-image gallery-image-transitions", this.getImageOptions(image)) : null
+              image === currentNode ? this.view_image(image) : null
             )
           ))),
           m("button.carousel-control-prev h-100[type=button]", {onclick: this.onSelectPrev.bind(null, currentNode)}, [
@@ -159,9 +158,7 @@ function showImageViewer({currentNode, nodeList = []} = {}) {
           ]),
         ] : (
           m("div.carousel-inner h-100",
-            m("div.carousel-item active h-100 text-center",
-              m("img.h-100 gallery-image gallery-image-transitions", this.getImageOptions(currentNode))
-            )
+            m("div.carousel-item active h-100 text-center", this.view_image(currentNode))
           )
         ),
       );

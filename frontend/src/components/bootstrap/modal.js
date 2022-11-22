@@ -12,12 +12,10 @@ function Modal({
     oncreate: (vnode) => {
       setTimeout(() => {
           vnode.dom.classList.add("show");
-          document.body.classList.add("modal-open");
         }, 0);
     },
     onbeforeremove: function(vnode) {
       vnode.dom.classList.remove("show");
-      document.body.classList.remove("modal-open");
 
       return new Promise(function(resolve) {
         vnode.dom.addEventListener("transitionend", resolve)
@@ -25,12 +23,7 @@ function Modal({
     },
     view: () => {
       return (
-        m("div.modal d-block fade[tabindex=-1]",
-          {
-            onclick: (e) => {
-              if (e.target.classList.contains("modal")) this.close();
-            }
-          },
+        m("div.modal d-block fade[tabindex=-1]", {onclick: (e) => {if (e.target.classList.contains("modal")) this.close()}},
           m("div.modal-dialog", {class: modalDialogClass},
             m("div.modal-content", [
               headerComponent ?
