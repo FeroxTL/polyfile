@@ -22,3 +22,7 @@ coverage:
 
 run:
 	@python3 $(manage) runserver
+
+
+build_requirements:
+	pip-compile requirements.in.txt --resolver=backtracking --output-file=requirements.txt
