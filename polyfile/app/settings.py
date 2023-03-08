@@ -218,7 +218,7 @@ if TESTING:
     WEBPACK_LOADER = {
         'DEFAULT': {
             'CACHE': False,
-            'LOADER_CLASS': 'app.utils.tests.TestWebpackLoader',
+            'LOADER_CLASS': 'webpack_loader.loader.FakeWebpackLoader',
         },
     }
 

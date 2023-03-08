@@ -19,5 +19,4 @@ todo: move to readthedocs
 pip install dev-requirements.txt
 cd docs
 make html
-xdg-open ./_build/index.html
 ```
