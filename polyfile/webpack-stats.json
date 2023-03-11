@@ -1,0 +1,46 @@
+{
+  "status": "done",
+  "assets": {
+    "blockForm-2d7fdccebab5466d43db.js": {
+      "name": "blockForm-2d7fdccebab5466d43db.js",
+      "path": "blockForm-2d7fdccebab5466d43db.js"
+    },
+    "dashboard-2d7fdccebab5466d43db.js": {
+      "name": "dashboard-2d7fdccebab5466d43db.js",
+      "path": "dashboard-2d7fdccebab5466d43db.js"
+    },
+    "static/css/blockForm.41f4af9f3f8a1c1eb43d.css": {
+      "name": "static/css/blockForm.41f4af9f3f8a1c1eb43d.css",
+      "path": "static/css/blockForm.41f4af9f3f8a1c1eb43d.css"
+    },
+    "static/css/vendor.ae41a14d1ebb2807f0e3.css": {
+      "name": "static/css/vendor.ae41a14d1ebb2807f0e3.css",
+      "path": "static/css/vendor.ae41a14d1ebb2807f0e3.css"
+    },
+    "static/fonts/41c0f706d8ce93933771.woff2": {
+      "name": "static/fonts/41c0f706d8ce93933771.woff2",
+      "path": "static/fonts/41c0f706d8ce93933771.woff2"
+    },
+    "static/fonts/b1a653db79258eeccc5d.ttf": {
+      "name": "static/fonts/b1a653db79258eeccc5d.ttf",
+      "path": "static/fonts/b1a653db79258eeccc5d.ttf"
+    },
+    "vendor-2d7fdccebab5466d43db.js": {
+      "name": "vendor-2d7fdccebab5466d43db.js",
+      "path": "vendor-2d7fdccebab5466d43db.js"
+    }
+  },
+  "chunks": {
+    "blockForm": [
+      "blockForm-2d7fdccebab5466d43db.js",
+      "static/css/blockForm.41f4af9f3f8a1c1eb43d.css"
+    ],
+    "dashboard": [
+      "dashboard-2d7fdccebab5466d43db.js"
+    ],
+    "vendor": [
+      "vendor-2d7fdccebab5466d43db.js",
+      "static/css/vendor.ae41a14d1ebb2807f0e3.css"
+    ]
+  }
+}

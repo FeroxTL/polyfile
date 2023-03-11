@@ -4,12 +4,14 @@ const BundleTracker = require('webpack-bundle-tracker');
 
 
 const rootDir = path.resolve(__dirname, '..');
-const mainAppDir = path.resolve(rootDir, '..', 'polyfile');
-const bundlesDir = path.resolve(mainAppDir, 'web_dev_assets', 'bundles');
 const srcDir = path.resolve(rootDir, 'src');
 
 
-var config = {
+const bundleTracker = new BundleTracker({
+  relativePath: true,
+});
+
+const config = {
   context: __dirname,
   entry: {
     dashboard: {
@@ -20,7 +22,6 @@ var config = {
     blockForm: [path.resolve(srcDir, 'styles/block-form.scss')],
   },
   output: {
-    path: bundlesDir,
     filename: "[name]-[fullhash].js",
     clean: true,
   },
@@ -29,7 +30,7 @@ var config = {
       filename: 'static/css/[name].[contenthash].css',
       linkType: "text/css",
     }),
-    new BundleTracker({filename: path.resolve(mainAppDir, 'webpack-stats.json')}),
+    bundleTracker,
   ],
   module: {
     rules: [
@@ -61,12 +62,19 @@ var config = {
 
 
 module.exports = (env, argv) => {
-  if (argv.mode === 'development') {
-    config.devtool = 'source-map';
+  const isDev = argv.mode === 'development';
+  let webpackStatsFilename = isDev ? 'webpack-dev-stats.json' : 'webpack-stats.json';
+  if (env.hasOwnProperty('stats-filename')) {
+    webpackStatsFilename = path.resolve(env["stats-filename"]);
+  } else if (argv.hasOwnProperty('outputPath')) {
+    webpackStatsFilename = path.resolve(argv.outputPath, '..', webpackStatsFilename);
   }
 
-  if (argv.mode === 'production') {
-    //...
+  bundleTracker.options.filename = webpackStatsFilename;
+
+
+  if (isDev) {
+    config.devtool = 'source-map';
   }
 
   return config;

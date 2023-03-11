@@ -5,9 +5,9 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "watch": "webpack --config config/webpack.config.js --mode development --watch",
-    "build_dev": "webpack --config config/webpack.config.js --mode development",
-    "build": "webpack --config config/webpack.config.js --mode production"
+    "watch": "webpack --config config/webpack.config.js --mode development --watch --output-path ../web_dev_assets/bundles --env stats-filename=../webpack-dev-stats.json",
+    "build_dev": "webpack --config config/webpack.config.js --mode development --output-path ../web_dev_assets/bundles --env stats-filename=../webpack-dev-stats.json",
+    "build": "webpack --config config/webpack.config.js --mode production --output-path ../polyfile/web_assets --env stats-filename=../polyfile/webpack-stats.json"
   },
   "keywords": [],
   "author": "",

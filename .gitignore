@@ -144,7 +144,7 @@ cython_debug/
 node_modules
 
 # project
-webpack-stats.json
+/webpack-dev-stats.json
 collected_static
-polyfile/web_dev_assets
+/web_dev_assets
 polyfile/local

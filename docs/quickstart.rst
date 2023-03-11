@@ -176,7 +176,7 @@ Settings
 
 ..  confval:: STATIC_ROOT
     :type: str
-    :default: None
+    :default: <cwd> / collected_static
 
     The absolute path to the directory where :code:`collectstatic` will collect static files for deployment.
     Example: `/var/www/example.com/static/`

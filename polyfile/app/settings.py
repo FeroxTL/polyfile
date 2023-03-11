@@ -6,6 +6,7 @@ from environ import environ
 
 PROJECT_DIR = Path(__file__).resolve().parent
 BASE_DIR = PROJECT_DIR.parent
+ROOT_DIR = BASE_DIR.parent
 
 env = environ.Env(
     DEBUG=(bool, True),
@@ -111,16 +112,19 @@ AXES_FAILURE_LIMIT = env.int('LOGIN_PROTECTION_FAILURE_LIMIT', 3)
 AXES_LOCKOUT_TEMPLATE = 'accounts/errors/account_is_locked.html'
 
 
-# Webpack
+# Webpack loader
+DEFAULT_WEBPACK_STATS_FILE = ROOT_DIR / 'webpack-dev-stats.json' if DEBUG else BASE_DIR / 'webpack-stats.json'
+WEBPACK_STATS_FILE = env.str('WEBPACK_STATS_FILE', DEFAULT_WEBPACK_STATS_FILE)
 WEBPACK_LOADER = {
   'DEFAULT': {
     'BUNDLE_DIR_NAME': 'bundles/',
-    'STATS_FILE': BASE_DIR / 'webpack-stats.json',
+    'STATS_FILE': WEBPACK_STATS_FILE,
     'POLL_INTERVAL': 0.3,
     'IGNORE': [r'.+\.hot-update.js', r'.+\.map'],
   }
 }
-
+DEFAULT_WEBPACK_ASSETS_DIR = ROOT_DIR / 'web_dev_assets' if DEBUG else BASE_DIR / 'web_assets'
+WEBPACK_ASSETS_DIR = env.str('WEBPACK_ASSETS_DIR', DEFAULT_WEBPACK_ASSETS_DIR)
 
 # Rest framework api
 REST_FRAMEWORK = {
@@ -191,9 +195,9 @@ STATIC_URL = env.str('STATIC_URL', '/static/')
 MEDIA_URL = '/media/'
 STATICFILES_DIRS = (
     PROJECT_DIR / 'static',
-    BASE_DIR / 'web_dev_assets',
+    WEBPACK_ASSETS_DIR,
 )
-STATIC_ROOT = env.str('STATIC_ROOT', None)
+STATIC_ROOT = env.str('STATIC_ROOT', Path.cwd() / 'collected_static')
 GUNICORN_BIND = env.str('GUNICORN_BIND', 'unix:/tmp/gunicorn.sock')
 NGINX_MAX_BODY_SIZE = env.str('NGINX_MAX_BODY_SIZE', '100m')
 NGINX_PROXY_PASS = env.str('NGINX_PROXY_PASS', 'http://{}'.format(GUNICORN_BIND))
@@ -207,8 +211,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Debug toolbar
 ENABLE_DEBUG_TOOLBAR = env.bool('ENABLE_DEBUG_TOOLBAR', DEBUG and not TESTING)
 if ENABLE_DEBUG_TOOLBAR:
-    INSTALLED_APPS.append('debug_toolbar')
-    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    try:
+        import debug_toolbar
+        print(f'Using debug_toolbar version {debug_toolbar.VERSION}')
+    except ImportError:
+        ENABLE_DEBUG_TOOLBAR = False
+    else:
+        INSTALLED_APPS.append('debug_toolbar')
+        MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 DEBUG_TOOLBAR_CONFIG = {
     'SHOW_COLLAPSED': True,
@@ -228,3 +238,27 @@ if TESTING or DISABLE_CACHE:
             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
         }
     }
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'propagate': True,
+            'level': 'INFO',
+        },
+    }
+}
