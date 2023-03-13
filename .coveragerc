@@ -7,6 +7,7 @@ source =
 
 omit =
     */factories.py
+    */checks.py
     */migrations/*
     polyfile/__main__.py
     polyfile/app/settings.py
