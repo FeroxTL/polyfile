@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from accounts.models import User
+from polyfile.accounts.models import User
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):

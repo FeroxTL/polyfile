@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from app.utils.models import get_field
-from storage.base_data_provider import provider_registry
-from storage.models import DataSource
+from polyfile.app.utils.models import get_field
+from polyfile.storage.base_data_provider import provider_registry
+from polyfile.storage.models import DataSource
 
 
 class DataSourceSerializer(serializers.ModelSerializer):

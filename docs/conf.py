@@ -6,7 +6,8 @@ from pathlib import Path
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-sys.path.append(str(Path('..', 'polyfile').resolve()))
+sys.path.append(str(Path('..').resolve()))
+from polyfile import __version__
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -14,7 +15,7 @@ sys.path.append(str(Path('..', 'polyfile').resolve()))
 project = 'Polyfile'
 copyright = '2022, Yuriy Makarov'
 author = 'Yuriy Makarov'
-release = '0.1'
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -34,7 +35,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'bizstyle'
 html_static_path = ['_static']
 html_sidebars = {
-    "index": ['localtoc.html', 'relations.html', 'project.html', 'searchbox.html'],
+    'index': ['localtoc.html', 'relations.html', 'project.html', 'searchbox.html'],
     '**': ['localtoc.html', 'relations.html', 'searchbox.html'],
 }
 html_context = {

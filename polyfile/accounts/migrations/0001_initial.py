@@ -5,7 +5,7 @@ import django.contrib.auth.validators
 from django.db import migrations, models
 import django.utils.timezone
 
-import accounts.models
+import polyfile.accounts.models
 
 
 class Migration(migrations.Migration):
@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
             managers=[
-                ('objects', accounts.models.UserManager()),
+                ('objects', polyfile.accounts.models.UserManager()),
             ],
         ),
     ]

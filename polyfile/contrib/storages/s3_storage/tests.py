@@ -6,9 +6,9 @@ from PIL import Image
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 
-from accounts.factories import UserFactory
-from contrib.storages.s3_storage.provider import S3StorageProvider
-from storage.factories import DataLibraryFactory, FileFactory, ImageFactory, AltNodeFactory
+from polyfile.accounts.factories import UserFactory
+from polyfile.contrib.storages.s3_storage.provider import S3StorageProvider
+from polyfile.storage.factories import DataLibraryFactory, FileFactory, ImageFactory, AltNodeFactory
 
 
 class FileSystemStorageProviderTests(TestCase):

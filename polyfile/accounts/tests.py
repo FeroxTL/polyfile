@@ -9,8 +9,8 @@ from django.urls import reverse
 from django.utils.timezone import now
 from rest_framework import status
 
-from accounts.factories import UserFactory
-from accounts.models import ResetPasswordAttempt, User
+from polyfile.accounts.factories import UserFactory
+from polyfile.accounts.models import ResetPasswordAttempt, User
 
 
 class TestAccounts(TestCase):

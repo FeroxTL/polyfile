@@ -1,7 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from accounts.models import User
+from polyfile.accounts.models import User
 
 
 class UserFactory(DjangoModelFactory):

@@ -3,7 +3,7 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import storage.fields
+import polyfile.storage.fields
 import uuid
 
 
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False, db_index=True)),
                 ('name', models.CharField(blank=False, db_index=True, max_length=255, verbose_name='Name')),
-                ('file', storage.fields.DynamicStorageFileField(upload_to='')),
+                ('file', polyfile.storage.fields.DynamicStorageFileField(upload_to='')),
                 ('size', models.PositiveIntegerField(default=0, help_text='Size in bytes', verbose_name='Size')),
                 ('file_type', models.CharField(choices=[('directory', 'Directory'), ('file', 'File')], db_index=True, max_length=16, verbose_name='Node type')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Creation date')),
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
             name='AltNode',
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False, db_index=True)),
-                ('file', storage.fields.DynamicStorageFileField(blank=True)),
+                ('file', polyfile.storage.fields.DynamicStorageFileField(blank=True)),
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Date update')),
                 ('data_library', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='storage.datalibrary', verbose_name='Data library')),
                 ('mimetype', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='storage.mimetype', verbose_name='Mimetype')),

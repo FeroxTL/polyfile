@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-manage = "./polyfile/manage.py"
+manage = "./manage.py"
 current_dir = $(shell pwd)
 
 clean:
@@ -26,3 +26,7 @@ run:
 
 build_requirements:
 	pip-compile requirements.in.txt --resolver=backtracking --output-file=requirements.txt
+
+
+sdist:
+	python setup.py sdist

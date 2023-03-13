@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
-from accounts.views import (
+from polyfile.accounts.views import (
     IndexView, CustomLoginView, CustomPasswordResetView, CustomPasswordResetConfirmView, CustomPasswordResetDoneView,
     CustomPasswordResetCompleteView
 )
@@ -20,7 +20,7 @@ urlpatterns = [
     path('accounts/password_reset/complete/', CustomPasswordResetCompleteView.as_view(),
          name='password_reset_complete'),
 
-    path('api/v1/', include(('app.api_v1.urls', 'api_v1'))),
+    path('api/v1/', include(('polyfile.app.api_v1.urls', 'api_v1'))),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

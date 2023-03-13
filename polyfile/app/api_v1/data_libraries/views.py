@@ -11,10 +11,10 @@ from rest_framework import generics, permissions, exceptions, serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
-from app.api_v1.data_libraries.serializers import data_library_serializers, node_serializers
-from storage.models import DataLibrary, Node, AltNode, AbstractNode
-from storage.thumbnailer import thumbnailer, ThumbnailException
-from storage.utils import get_node_by_path, get_mimetype
+from polyfile.app.api_v1.data_libraries.serializers import data_library_serializers, node_serializers
+from polyfile.storage.models import DataLibrary, Node, AltNode, AbstractNode
+from polyfile.storage.thumbnailer import thumbnailer, ThumbnailException
+from polyfile.storage.utils import get_node_by_path, get_mimetype
 
 
 class DataLibraryListCreateView(generics.ListCreateAPIView):

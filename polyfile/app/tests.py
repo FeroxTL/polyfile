@@ -19,7 +19,7 @@ class TestAnimal(TestCase):
         )
         file_list = [
             settings.BASE_DIR / path
-            for path in ['', 'manage.py']
+            for path in ['', '__main__.py']
         ]
         for file in file_list:
             self.assertTrue(file.exists(), f'Path {file} does not exist')

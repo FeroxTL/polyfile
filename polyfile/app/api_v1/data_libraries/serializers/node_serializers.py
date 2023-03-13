@@ -6,11 +6,11 @@ from django.db import transaction, IntegrityError
 from django.utils import timezone
 from rest_framework import serializers, exceptions
 
-from app.utils.models import get_field
+from polyfile.app.utils.models import get_field
 
-from storage.models import Node
-from storage.thumbnailer import thumbnailer
-from storage.utils import get_node_by_path, get_mimetype, adapt_path
+from polyfile.storage.models import Node
+from polyfile.storage.thumbnailer import thumbnailer
+from polyfile.storage.utils import get_node_by_path, get_mimetype, adapt_path
 
 
 class NodeSerializer(serializers.ModelSerializer):

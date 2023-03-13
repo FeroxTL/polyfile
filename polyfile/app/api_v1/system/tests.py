@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
-from accounts.factories import UserFactory
+from polyfile.accounts.factories import UserFactory
 
 
 class SystemTests(APITestCase):

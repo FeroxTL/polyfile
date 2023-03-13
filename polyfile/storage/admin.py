@@ -6,9 +6,9 @@ from django.core.exceptions import ValidationError
 from django.forms import ChoiceField
 from django_cte import With
 
-from storage.base_data_provider import provider_registry
-from storage.models import DataLibrary, DataSource, Node, Mimetype, AltNode
-from storage.utils import get_node_queryset, make_node_cte
+from polyfile.storage.base_data_provider import provider_registry
+from polyfile.storage.models import DataLibrary, DataSource, Node, Mimetype, AltNode
+from polyfile.storage.utils import get_node_queryset, make_node_cte
 
 admin.site.register(Mimetype)
 

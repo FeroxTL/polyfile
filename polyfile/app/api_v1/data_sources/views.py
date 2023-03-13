@@ -1,8 +1,8 @@
 from rest_framework import generics, permissions
 
-from app.api_v1.data_sources import data_source_serializers
-from app.api_v1.utils.metadata import V1Metadata
-from storage.models import DataSource
+from polyfile.app.api_v1.data_sources import data_source_serializers
+from polyfile.app.api_v1.utils.metadata import V1Metadata
+from polyfile.storage.models import DataSource
 
 
 class DataSourceListCreateView(generics.ListCreateAPIView):

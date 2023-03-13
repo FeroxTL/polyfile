@@ -28,8 +28,9 @@ You can also create :code:`.env` file in :code:`BASEDIR` directory:
     (.venv)$ ./manage.py runserver
 
 
-:code:`.env` file in root directory is loaded by :code:`./manage.py` automatically
+:code:`.env` file in current directory is loaded automatically
 
+.. _settings:
 
 Settings
 ------------------------------

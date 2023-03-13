@@ -3,10 +3,10 @@ from django.conf import settings
 
 
 class StorageConfig(AppConfig):
-    name = 'storage'
+    name = 'polyfile.storage'
 
     def ready(self):  # noqa
-        from storage.thumbnailer import thumbnailer
+        from polyfile.storage.thumbnailer import thumbnailer
 
         if settings.NORMAL_RUNNING:
             thumbnailer.setup()

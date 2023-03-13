@@ -1,10 +1,10 @@
 from django.urls import path, include
 
-from app.api_v1.data_libraries import views as dl_views
-from app.api_v1.data_sources import views as ds_views
-from app.api_v1.data_providers import views as dp_views
-from app.api_v1.system import views as sys_views
-from app.api_auth import urls as api_urls
+from polyfile.app.api_v1.data_libraries import views as dl_views
+from polyfile.app.api_v1.data_sources import views as ds_views
+from polyfile.app.api_v1.data_providers import views as dp_views
+from polyfile.app.api_v1.system import views as sys_views
+from polyfile.app.api_auth import urls as api_urls
 
 urlpatterns = [
     path('', sys_views.ApiIndex.as_view(), name='index'),

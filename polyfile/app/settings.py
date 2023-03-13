@@ -10,17 +10,17 @@ ROOT_DIR = BASE_DIR.parent
 
 env = environ.Env(
     DEBUG=(bool, True),
-    ENVFILE=(str, BASE_DIR / '.env'),
+    ENVFILE=(str, Path.cwd() / '.env'),
     ALLOWED_HOSTS=(list, ['localhost']),
     INTERNAL_IPS=(list, ['127.0.0.1'])
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
 TESTING = 'test' in sys.argv
 NORMAL_RUNNING = os.getenv('WSGI_SERVER') or 'runserver' in sys.argv
 if not TESTING:
     environ.Env.read_env(env('ENVFILE'))
+DEBUG = env.bool('DEBUG')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-=y=ppfyl*gza@hbw)bxfe^p)rik%t_+7@4f6vv%9e=1$lu8y#m')
@@ -45,13 +45,13 @@ INSTALLED_APPS = [
     'djcelery_email',
     'axes',
 
-    'app',
-    'accounts',
-    'storage',
+    'polyfile.app',
+    'polyfile.accounts',
+    'polyfile.storage',
 
     # Registered storages
-    'contrib.storages.filesystem_storage',
-    'contrib.storages.s3_storage',
+    'polyfile.contrib.storages.filesystem_storage',
+    'polyfile.contrib.storages.s3_storage',
 ]
 
 MIDDLEWARE = [
@@ -67,7 +67,7 @@ MIDDLEWARE = [
     'axes.middleware.AxesMiddleware',
 ]
 
-ROOT_URLCONF = 'app.urls'
+ROOT_URLCONF = 'polyfile.app.urls'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 APPEND_SLASH = True
@@ -128,7 +128,7 @@ WEBPACK_ASSETS_DIR = env.str('WEBPACK_ASSETS_DIR', DEFAULT_WEBPACK_ASSETS_DIR)
 
 # Rest framework api
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'app.utils.handlers.api_exception_handler',
+    'EXCEPTION_HANDLER': 'polyfile.app.utils.handlers.api_exception_handler',
 }
 
 
@@ -148,12 +148,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'app.wsgi.application'
+WSGI_APPLICATION = 'polyfile.app.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-DEFAULT_DATABASE = 'sqlite:///{}'.format(BASE_DIR / 'db.sqlite3')
+DEFAULT_DATABASE = 'sqlite:///{}'.format(Path.cwd() / 'db.sqlite3')
 DATABASES = {
     'default': env.db('DATABASE_URL', DEFAULT_DATABASE),
 }
@@ -258,7 +258,7 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'propagate': True,
-            'level': 'INFO',
+            'level': 'CRITICAL' if TESTING else 'INFO',
         },
     }
 }

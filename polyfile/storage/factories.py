@@ -4,9 +4,9 @@ import factory
 from factory import fuzzy
 from factory.django import DjangoModelFactory
 
-from accounts.factories import UserFactory
-from app.utils.tests import TestProvider
-from storage.models import DataSource, DataLibrary, Mimetype, Node, AltNode
+from polyfile.accounts.factories import UserFactory
+from polyfile.app.utils.tests import TestProvider
+from polyfile.storage.models import DataSource, DataLibrary, Mimetype, Node, AltNode
 
 
 class DataSourceFactory(DjangoModelFactory):

@@ -4,8 +4,8 @@ from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from storage.models import Node
-from storage.utils import get_mimetype
+from polyfile.storage.models import Node
+from polyfile.storage.utils import get_mimetype
 
 
 class ThumbnailException(Exception):

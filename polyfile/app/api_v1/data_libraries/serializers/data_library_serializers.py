@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from storage.models import DataLibrary
+
+from polyfile.storage.models import DataLibrary
 
 
 class DataLibrarySerializer(serializers.ModelSerializer):

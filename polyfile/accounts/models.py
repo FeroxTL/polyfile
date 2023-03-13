@@ -8,12 +8,11 @@ from django.dispatch import receiver
 from django.utils.timezone import now
 from django.utils.translation import gettext as _
 
-from app.utils.managers import CacheManager
+from polyfile.app.utils.managers import CacheManager
 
 
 class UserManager(CacheManager, DjangoUserManager):
     """User manager with caching."""
-
     pass
 
 

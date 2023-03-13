@@ -8,9 +8,9 @@ from django.db import models
 from django.urls import reverse
 from django_cte import CTEManager
 
-from app.utils.managers import CacheManager
-from storage.base_data_provider import BaseProvider, provider_registry
-from storage.fields import DynamicStorageFileField
+from polyfile.app.utils.managers import CacheManager
+from polyfile.storage.base_data_provider import BaseProvider, provider_registry
+from polyfile.storage.fields import DynamicStorageFileField
 
 
 class DataSource(models.Model):

@@ -1,0 +1,6 @@
+include requirements.txt README.md
+recursive-include polyfile/accounts/templates *
+recursive-include polyfile/app/templates *
+recursive-include polyfile/app/static *
+recursive-include polyfile/web_assets *
+include polyfile/webpack-stats.json

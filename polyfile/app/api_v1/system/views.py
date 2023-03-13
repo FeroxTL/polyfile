@@ -1,8 +1,8 @@
 from django.urls import reverse
 from rest_framework import generics, permissions, response, views
 
-from accounts.models import User
-from app.api_v1.system.serializers import CurrentUserSerializer
+from polyfile.accounts.models import User
+from polyfile.app.api_v1.system.serializers import CurrentUserSerializer
 
 
 class CurrentUserView(generics.RetrieveAPIView):

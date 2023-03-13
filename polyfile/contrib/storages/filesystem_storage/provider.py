@@ -2,8 +2,8 @@ from pathlib import Path
 
 from django.core.files.storage import Storage, FileSystemStorage
 
-from storage.base_data_provider import BaseProvider
-from contrib.storages.filesystem_storage.forms import FileStorageForm
+from polyfile.storage.base_data_provider import BaseProvider
+from polyfile.contrib.storages.filesystem_storage.forms import FileStorageForm
 
 
 class FileSystemStorageProvider(BaseProvider):

@@ -9,8 +9,8 @@ from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 from django.utils.translation import gettext as _
 
-from accounts.models import ResetPasswordAttempt
-from app.forms import CustomAuthenticationForm, CustomPasswordResetForm, CustomSetPasswordForm
+from polyfile.accounts.models import ResetPasswordAttempt
+from polyfile.app.forms import CustomAuthenticationForm, CustomPasswordResetForm, CustomSetPasswordForm
 
 
 @method_decorator(login_required, name='dispatch')

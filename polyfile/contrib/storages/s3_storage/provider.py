@@ -2,9 +2,9 @@ from django.core.files.storage import Storage
 from django.utils.timezone import now
 from storages.backends.s3boto3 import S3StaticStorage, S3Boto3Storage
 
-from contrib.storages.s3_storage.forms import S3ValidationForm
-from storage.base_data_provider import BaseProvider
-from storage.models import DataLibrary, AbstractNode
+from polyfile.contrib.storages.s3_storage.forms import S3ValidationForm
+from polyfile.storage.base_data_provider import BaseProvider
+from polyfile.storage.models import DataLibrary, AbstractNode
 
 
 class S3StorageProvider(BaseProvider):

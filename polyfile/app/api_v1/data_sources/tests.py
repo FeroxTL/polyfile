@@ -5,10 +5,10 @@ from django.forms import forms, fields
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
-from accounts.factories import SuperuserFactory, UserFactory
-from app.utils.tests import TestProvider
-from storage.factories import DataSourceFactory
-from storage.models import DataSource
+from polyfile.accounts.factories import SuperuserFactory, UserFactory
+from polyfile.app.utils.tests import TestProvider
+from polyfile.storage.factories import DataSourceFactory
+from polyfile.storage.models import DataSource
 
 
 class DataSourceRegularUserTests(APITestCase):

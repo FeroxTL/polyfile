@@ -7,7 +7,7 @@ from django.forms import forms
 from django.utils.timezone import now
 
 if typing.TYPE_CHECKING:
-    from storage.models import Node, DataLibrary, AbstractNode
+    from polyfile.storage.models import Node, DataLibrary, AbstractNode
 
 
 class BaseProvider(ABC):

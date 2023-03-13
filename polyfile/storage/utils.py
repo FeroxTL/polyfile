@@ -5,7 +5,7 @@ from functools import partial
 from django.db.models import F, Value, TextField
 from django.db.models.functions import Concat
 from django_cte import With
-from storage.models import Node, DataLibrary, Mimetype
+from polyfile.storage.models import Node, DataLibrary, Mimetype
 
 
 def get_mimetype(mtype: str, default='application/octet-stream') -> Mimetype:

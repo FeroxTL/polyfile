@@ -6,10 +6,10 @@ from django.core.files.uploadedfile import UploadedFile
 from django.urls import reverse
 from rest_framework import status
 
-from accounts.factories import UserFactory
-from app.utils.tests import with_tempdir, AdminTestCase
-from contrib.storages.filesystem_storage.provider import FileSystemStorageProvider
-from storage.factories import DataLibraryFactory, FileFactory
+from polyfile.accounts.factories import UserFactory
+from polyfile.app.utils.tests import with_tempdir, AdminTestCase
+from polyfile.contrib.storages.filesystem_storage.provider import FileSystemStorageProvider
+from polyfile.storage.factories import DataLibraryFactory, FileFactory
 
 
 class FileSystemStorageAdminTests(AdminTestCase):

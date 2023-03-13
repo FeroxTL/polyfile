@@ -9,13 +9,14 @@ from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from accounts.factories import SuperuserFactory
-from app.utils.tests import TestProvider, with_tempdir, AdminTestCase
-from storage.factories import DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory, AltNodeFactory, \
-    ImageFactory
-from storage.models import Node, DataSource, AltNode, Mimetype
-from storage.thumbnailer import Thumbnailer
-from storage.utils import get_node_by_path, get_node_queryset
+from polyfile.accounts.factories import SuperuserFactory
+from polyfile.app.utils.tests import TestProvider, with_tempdir, AdminTestCase
+from polyfile.storage.factories import (
+    DirectoryFactory, DataLibraryFactory, FileFactory, DataSourceFactory, AltNodeFactory, ImageFactory
+)
+from polyfile.storage.models import Node, DataSource, AltNode, Mimetype
+from polyfile.storage.thumbnailer import Thumbnailer
+from polyfile.storage.utils import get_node_by_path, get_node_queryset
 
 
 class StorageTests(TestCase):
@@ -320,14 +321,14 @@ class ThumbnailTestCase(TestCase):
         thumbnailer = Thumbnailer()
 
         # There is no supported formats
-        with mock.patch('storage.thumbnailer.Image') as image:
+        with mock.patch('polyfile.storage.thumbnailer.Image') as image:
             image.MIME = {}
             thumbnailer.default_formats = ['png', 'jpeg']
             thumbnailer.setup()
         self.assertEqual(thumbnailer.default_formats, [])
 
         # Normal setup
-        with mock.patch('storage.thumbnailer.Image') as image:
+        with mock.patch('polyfile.storage.thumbnailer.Image') as image:
             image.MIME = {'PNG': 'image/png', 'JPEG': 'image/jpeg'}
             thumbnailer.default_formats = ['png', 'jpeg']
             thumbnailer.setup()

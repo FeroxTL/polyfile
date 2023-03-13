@@ -1,8 +1,8 @@
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
-from accounts.factories import SuperuserFactory, UserFactory
-from storage.base_data_provider import provider_registry
+from polyfile.accounts.factories import SuperuserFactory, UserFactory
+from polyfile.storage.base_data_provider import provider_registry
 
 
 class DataProviderTests(APITestCase):

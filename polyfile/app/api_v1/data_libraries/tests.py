@@ -9,11 +9,13 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.factories import UserFactory
-from app.utils.tests import with_tempdir
-from storage.factories import DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory, ImageFactory
-from storage.models import DataLibrary, Node, AltNode
-from storage.thumbnailer import thumbnailer
+from polyfile.accounts.factories import UserFactory
+from polyfile.app.utils.tests import with_tempdir
+from polyfile.storage.factories import (
+    DataSourceFactory, DataLibraryFactory, FileFactory, DirectoryFactory, ImageFactory
+)
+from polyfile.storage.models import DataLibrary, Node, AltNode
+from polyfile.storage.thumbnailer import thumbnailer
 
 
 class LibraryTests(APITestCase):

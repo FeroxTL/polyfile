@@ -7,8 +7,8 @@ from django.core.files.storage import Storage, FileSystemStorage
 from django.test import TestCase
 from rest_framework.fields import DateTimeField
 
-from accounts.factories import SuperuserFactory
-from storage.base_data_provider import BaseProvider, provider_registry
+from polyfile.accounts.factories import SuperuserFactory
+from polyfile.storage.base_data_provider import BaseProvider, provider_registry
 
 
 def drf_dt(dt) -> str:
