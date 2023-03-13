@@ -8,7 +8,7 @@ source =
 omit =
     */factories.py
     */migrations/*
-    polyfile/manage.py
+    polyfile/__main__.py
     polyfile/app/settings.py
     polyfile/app/asgi.py
     polyfile/app/wsgi.py

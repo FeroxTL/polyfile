@@ -194,7 +194,6 @@ USE_TZ = True
 STATIC_URL = env.str('STATIC_URL', '/static/')
 MEDIA_URL = '/media/'
 STATICFILES_DIRS = (
-    PROJECT_DIR / 'static',
     WEBPACK_ASSETS_DIR,
 )
 STATIC_ROOT = env.str('STATIC_ROOT', Path.cwd() / 'collected_static')
